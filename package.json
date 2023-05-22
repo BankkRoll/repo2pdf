@@ -1,0 +1,26 @@
+{
+  "name": "repo-to-pdf",
+  "version": "1.0.0",
+  "description": "A script to clone a repository and generate a PDF from its text and code files",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BankkRoll/Repo-to-PDF.git"
+  },
+  "keywords": [
+    "github",
+    "repo",
+    "pdf"
+  ],
+  "author": "bankkroll",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^18.0.6",
+    "node-fetch": "^3.2.6",
+    "pdfkit": "^0.13.0",
+    "simple-git": "^3.18.0"
+  }
+}
