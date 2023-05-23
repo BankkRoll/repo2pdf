@@ -1,26 +1,51 @@
 {
-  "name": "repo-to-pdf",
-  "version": "1.0.0",
-  "description": "A script to clone a repository and generate a PDF from its text and code files",
-  "main": "index.js",
+  "name": "repo2pdf",
+  "version": "1.1.2",
+  "description": "A Node.js utility for generating a PDF document from a GitHub repository",
+  "main": "clone.js",
+  "bin": {
+    "repo2pdf": "./clone.js"
+  },
   "scripts": {
-    "start": "node index.js"
+    "start": "node clone.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BankkRoll/Repo-to-PDF.git"
+    "url": "https://github.com/BankkRoll/Repo-to-PDF.git"
   },
   "keywords": [
     "github",
-    "repo",
-    "pdf"
+    "repository",
+    "pdf",
+    "clone",
+    "nodejs",
+    "convert",
+    "document",
+    "langchain",
+    "openai",
+    "chatgpt",
+    "utility",
+    "tool"
   ],
-  "author": "bankkroll",
+  "author": "BankkRoll",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/BankkRoll/Repo-to-PDF/issues"
+  },
+  "homepage": "https://github.com/BankkRoll/Repo-to-PDF#readme",
+  "documentation": "https://github.com/BankkRoll/Repo-to-PDF#readme",
   "dependencies": {
     "@types/node": "^18.0.6",
+    "chalk": "^5.2.0",
+    "inquirer": "^9.2.6",
+    "isbinaryfile": "^5.0.0",
     "node-fetch": "^3.2.6",
+    "ora": "^6.3.1",
     "pdfkit": "^0.13.0",
     "simple-git": "^3.18.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

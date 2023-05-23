@@ -1,42 +1,80 @@
 # Repo-to-PDF
 
-Repo-to-PDF is a Node.js script that clones a GitHub repository, reads all the text and code files within the repository, and then generates a PDF document with the contents of each file.
+Repo-to-PDF is a tool that allows you to convert a GitHub repository into a PDF file. It clones the repository, processes the files, and then creates a PDF.
 
-## Description
+## Installation
 
-This tool is useful when you want to generate a physical or portable document of a repository's contents for offline reading, documentation, or archival purposes.
+To use Repo-to-PDF, you have two options: cloning the repository from GitHub or installing it directly using NPX. Choose the method that suits you best.
 
-The tool omits certain types of files including image files, video files, and certain meta-files from the Git system itself to focus on the main textual content. This includes all typical code files and markdown files.
+### Cloning the Repository
+
+1. Clone the repository:
+```shell
+git clone https://github.com/BankkRoll/Repo-to-PDF
+```
+
+2. Navigate to the Repo-to-PDF directory:
+```shell
+cd Repo-to-PDF
+```
+
+3. Install the dependencies:
+```shell
+npm install
+```
+
+### Installing with NPX
+
+1. Install Repo-to-PDF using NPX:
+```shell
+npx repo2pdf
+```
+
+This will download and install the latest version of Repo-to-PDF from the NPM registry.
 
 ## Usage
 
-Follow the steps below to use Repo-to-PDF:
+Once you have installed Repo-to-PDF, you can use it to generate PDF files from GitHub repositories.
 
-1. Clone this repository to your local machine. You can do this with the following command in your terminal:
-    ```
-    git clone https://github.com/BankkRoll/Repo-to-PDF.git
-    ```
+1. The script will install and start running. You will just follow the prompt:
 
-2. Navigate to the newly cloned directory:
-    ```
-    cd Repo-to-PDF
-    ```
+You will be prompted to provide the following information:
+- The URL of the GitHub repository
+- The name of the output PDF file
+- Whether or not you wish to keep the cloned repository after generating the PDF
 
-3. Install the required dependencies by running:
-    ```
-    npm install
-    ```
+The script will then clone the repository, process the files, and generate a PDF document based on the provided information.
 
-4. After installation, you can run the script with:
-    ```
-    node index.js https://github.com/<username>/<repository>
-    ```
-    Replace `https://github.com/<username>/<repository>` with the GitHub URL of the repository you wish to clone and convert to PDF.
+Please note that you need to have Node.js installed on your system in order to run Repo-to-PDF.
 
-5. The script will generate a PDF named `output.pdf` in the root directory of the project.
 
-Please note that this tool requires Node.js and npm to run. You can download Node.js and npm [here](https://nodejs.org/).
+## Configuration
+
+Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). To customize the files and directories to ignore, edit the `excludedNames` and `excludedExtensions` variables in `clone.js`.
+
+
+## Troubleshooting / FAQ
+
+**Q: I'm getting an error "Failed to install [package-name]". What should I do?**
+A: Make sure you have Node.js and npm installed on your system. Try running the following command to install the required package manually:
+```shell
+npm install [package-name]
+```
+
+**Q: How can I customize the styling of the generated PDF?**
+A: You can modify the code in `clone.js` to change the font, font size, colors, and other styling options for the PDF document.
+- Edit the `excludedExtensions` variable in `clone.js` to exclude certain file types from the PDF conversion.
+
+
+## Contributing
+
+We welcome contributions! Here's how you can help:
+
+- **Report bugs:** If you find a bug, please create an issue on GitHub describing the problem.
+- **Suggest enhancements:** If you think of a way to improve Repo-to-PDF, we'd love to hear about it! Create an issue on GitHub to share your ideas.
+- **Write code:** If you'd like to contribute code to fix a bug or implement a new feature, please fork the repository, make your changes, and submit a pull request.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+Repo-to-PDF is open source software, licensed under the MIT License. See the `LICENSE` file for more information.
+
