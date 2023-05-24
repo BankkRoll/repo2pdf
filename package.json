@@ -1,6 +1,6 @@
 {
   "name": "repo2pdf",
-  "version": "1.1.6",
+  "version": "1.2.0",
   "description": "A Node.js utility for generating a PDF document from a GitHub repository",
   "main": "clone.cjs",
   "bin": {
@@ -36,11 +36,9 @@
   "homepage": "https://github.com/BankkRoll/Repo-to-PDF#readme",
   "documentation": "https://github.com/BankkRoll/Repo-to-PDF#readme",
   "dependencies": {
-    "@types/node": "^18.0.6",
     "chalk": "^5.2.0",
     "inquirer": "^9.2.6",
     "isbinaryfile": "^5.0.0",
-    "node-fetch": "^3.2.6",
     "ora": "^6.3.1",
     "pdfkit": "^0.13.0",
     "simple-git": "^3.18.0"

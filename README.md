@@ -23,14 +23,23 @@ cd Repo-to-PDF
 npm install
 ```
 
+4. Run the script:
+```shell
+npm start
+```
+
 ### Installing with NPX
+This will download and install the latest version of Repo-to-PDF from the NPM registry.
 
 1. Install Repo-to-PDF using NPX:
 ```shell
 npx repo2pdf
 ```
 
-This will download and install the latest version of Repo-to-PDF from the NPM registry.
+2. Run Repo-to-PDF:
+```shell
+repo2pdf
+```
 
 ## Usage
 
@@ -50,7 +59,7 @@ Please note that you need to have Node.js installed on your system in order to r
 
 ## Configuration
 
-Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). To customize the files and directories to ignore, edit the `excludedNames` and `excludedExtensions` variables in `clone.js`.
+Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). To customize the files and directories to ignore, edit the `excludedNames` and `excludedExtensions` variables in `clone.cjs`.
 
 
 ## Troubleshooting / FAQ
@@ -62,8 +71,8 @@ npm install [package-name]
 ```
 
 **Q: How can I customize the styling of the generated PDF?**
-A: You can modify the code in `clone.js` to change the font, font size, colors, and other styling options for the PDF document.
-- Edit the `excludedExtensions` variable in `clone.js` to exclude certain file types from the PDF conversion.
+A: You can modify the code in `clone.cjs` to change the font, font size, colors, and other styling options for the PDF document.
+- Edit the `excludedExtensions` variable in `clone.cjs` to exclude certain file types from the PDF conversion.
 
 
 ## Contributing
