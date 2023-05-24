@@ -3,17 +3,32 @@ const fs = require('fs');
 const fsPromises = fs.promises;
 const path = require('path');
 const { execSync } = require('child_process');
+
+
 const git = require('simple-git');
 const PDFDocument = require('pdfkit');
 const isBinaryFile = require('isbinaryfile').isBinaryFileSync;
-const chalk = require('chalk');
-const inquirer = require('inquirer');
-const ora = require('ora');
 
+let chalk;
+let inquirer;
+let ora;
 
-let spinner = ora('Setting everything up...').start();
-spinner.succeed('Setup complete');
-askForRepoUrl();
+const spinnerPromise = import('ora').then((oraModule) => {
+    ora = oraModule.default;
+    return ora('Setting everything up...').start(); 
+});
+
+Promise.all([import('chalk'), import('inquirer'), spinnerPromise]).then(([chalkModule, inquirerModule, spinner]) => {
+    chalk = chalkModule.default;
+    inquirer = inquirerModule.default;
+    spinner.succeed('Setup complete');
+    askForRepoUrl();
+}).catch((err) => {
+    spinnerPromise.then((spinner) => {
+        spinner.fail('An error occurred during setup');
+    });
+    console.error(err);
+});
 
 
 async function askForRepoUrl() {
