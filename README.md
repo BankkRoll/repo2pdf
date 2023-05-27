@@ -1,95 +1,85 @@
-# Repo-to-PDF
+# MusicMind
 
-Repo-to-PDF is a tool that allows you to convert a GitHub repository into a PDF file. It clones the repository, processes the files, and then creates a PDF.
+MusicMind is an innovative music application that utilizes AI technology to generate unique and creative songs. Whether you're a musician looking for inspiration or simply enjoy discovering new music, MusicMind provides an exciting platform to explore AI-generated songs tailored to your preferences.
 
-## Example PDF
+## In Progress
+ MusicMind is currently in the process of development and building out the platform.
+- [Example Site Here](https://musicmind.vercel.app/)
 
-[FreeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp) repository was converted into a PDF from 42,998 files to 186,453 pages in under 2 minutes. This conversion is purely for example and stress testing purposes. All content belongs to the original authors at FreeCodeCamp. You can view the PDF [here](https://freecodecamppdf.bankkroll.repl.co).
-![Screenshot 2023-05-24 212226](https://github.com/BankkRoll/Repo-to-PDF/assets/106103625/9ceb176f-37f6-40d9-ab95-080942d2d7c0)
+- [x] Implement Resemble AI
+- [x] Implement User Auth
+- [ ] Move All APIs To Routes 
+- [ ] Implement User Payment For Token Usage ( ex. stripe )
+- [ ] Complete UI/UX Design. Intuitive, User-Friendly Interface. Resemble/Ideas From Spotify/Youtube But Own Distint Layouts
+- [ ] Implementing DB to store songs ( this will replace the current testing apis )
+- [ ] Implementing a feedback system for users to rate and review songs 
+- [ ] Implementing a system for users to create and share their custom AI models for music generation
 
+If you're interested in contributing to MusicMind, please visit our [Contributing Guidelines](/README.md#contributing).
+
+## Expected Future Features
+
+- Generate AI-powered songs based on user input and preferences.
+- Customize the style, emotion, and other parameters of the generated songs.
+- Allow users to create and share their custom AI models for music generation
+- Collaborate with other users to create collaborative AI-generated songs.
+- Explore a vast library of AI-generated songs and playlists.
+- Discover new and emerging artists through AI-curated recommendations.
 
 ## Installation
 
-To use Repo-to-PDF, you have two options: cloning the repository from GitHub or installing it directly using NPX. Choose the method that suits you best.
-
-### Cloning the Repository
+Follow these steps to set up MusicMind locally:
 
 1. Clone the repository:
-```shell
-git clone https://github.com/BankkRoll/Repo-to-PDF
+
+```bash
+git clone https://github.com/BankkRoll/musicmind.git
 ```
 
-2. Navigate to the Repo-to-PDF directory:
-```shell
-cd Repo-to-PDF
-```
+2. Install the dependencies:
 
-3. Install the dependencies:
-```shell
+```bash
+cd musicmind
 npm install
 ```
 
-4. Run the script:
-```shell
-npm start
+3. Configure the environment variables:
+
+Create a `.env` file in the root directory and specify the necessary environment variables. For example:
+
+```plaintext
+# https://clerk.com/
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=xxxxxxxxx
+CLERK_SECRET_KEY=xxxxxxxxx
+
+# https://www.resemble.ai/api/
+RESEMBLE_API_TOKEN=xxxxxxxxxx
 ```
 
-### Installing with NPX
-This will download and install the latest version of Repo-to-PDF from the NPM registry.
+4. Start the development server:
 
-1. Install Repo-to-PDF using NPX:
-```shell
-npx repo2pdf
+```bash
+npm run dev
 ```
 
-2. Run Repo-to-PDF:
-```shell
-repo2pdf
-```
-
-## Usage
-
-Once you have installed Repo-to-PDF, you can use it to generate PDF files from GitHub repositories.
-
-1. The script will install and start running. You will just follow the prompt:
-
-You will be prompted to provide the following information:
-- The URL of the GitHub repository
-- The name of the output PDF file
-- Whether or not you wish to keep the cloned repository after generating the PDF
-
-The script will then clone the repository, process the files, and generate a PDF document based on the provided information.
-
-Please note that you need to have Node.js installed on your system in order to run Repo-to-PDF.
-
-
-## Configuration
-
-Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). To customize the files and directories to ignore, edit the `excludedNames` and `excludedExtensions` variables in `clone.cjs`.
-
-
-## Troubleshooting / FAQ
-
-**Q: I'm getting an error "Failed to install [package-name]". What should I do?**
-A: Make sure you have Node.js and npm installed on your system. Try running the following command to install the required package manually:
-```shell
-npm install [package-name]
-```
-
-**Q: How can I customize the styling of the generated PDF?**
-A: You can modify the code in `clone.cjs` to change the font, font size, colors, and other styling options for the PDF document.
-- Edit the `excludedExtensions` variable in `clone.cjs` to exclude certain file types from the PDF conversion.
-
+The application will start running on `http://localhost:3000`.
 
 ## Contributing
 
-We welcome contributions! Here's how you can help:
+We welcome contributions to MusicMind! If you'd like to contribute, please follow these guidelines:
 
-- **Report bugs:** If you find a bug, please create an issue on GitHub describing the problem.
-- **Suggest enhancements:** If you think of a way to improve Repo-to-PDF, we'd love to hear about it! Create an issue on GitHub to share your ideas.
-- **Write code:** If you'd like to contribute code to fix a bug or implement a new feature, please fork the repository, make your changes, and submit a pull request.
+1. Fork the repository and create your branch:
+
+```bash
+git checkout -b my-feature
+```
+
+2. Make your changes and commit them:
+
+```bash
+git commit -m "Add new feature"
+```
 
 ## License
 
-Repo-to-PDF is open source software, licensed under the MIT License. See the `LICENSE` file for more information.
-
+Repo-to-PDF is open source software, licensed under the MIT License. See the [LICENSE](/LICENSE) file for more information.
