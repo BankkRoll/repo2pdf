@@ -109,7 +109,9 @@ async function main(repoUrl, outputFileName, keepRepo) {
             const filePath = path.join(directory, file);
             const stat = await fsPromises.stat(filePath);
     
+            // TODO ADD OPTION TO ADD OPTIONAL EXCLUDED FILES
             const excludedNames = ['.gitignore', '.gitmodules', 'package-lock.json', 'yarn.lock', '.git', 'infodata.json', ];
+            // TODO ADD OPTION TO ADD OPTIONAL EXCLUDED EXTENSIONS
             const excludedExtensions = ['.png', '.yml', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp', '.ico', '.mp4', '.mov', '.avi', '.wmv', '.xml'];
     
             // Check if file or directory should be excluded
