@@ -6,6 +6,8 @@ const { execSync } = require("child_process")
 
 const git = require("simple-git")
 const PDFDocument = require("pdfkit")
+const { default: hljs } = require("highlight.js")
+const { htmlToJson } = require("./syntax")
 const isBinaryFile = require("isbinaryfile").isBinaryFileSync
 
 // TODO IDEAS
@@ -278,18 +280,26 @@ async function main(
           data = data.replace(/\r\n/g, "\n")
           data = data.replace(/\r/g, "\n")
 
-          let lines = data.split("\n")
-          for (let i = 0; i < lines.length; i++) {
-            let lineNumber = String(i + 1).padStart(3, " ")
-            lines[i] = `${lineNumber} ${lines[i]}`
-          }
-          data = lines.join("\n")
-
           doc
             .addPage()
             .font("Courier")
             .fontSize(10)
-            .text(`${fileName}\n\n${data}`, { lineGap: 4 })
+            .text(`${fileName}\n\n`, { lineGap: 4 })
+
+          const highlightedCode = hljs.highlight(data, { language: "ps1" }).value
+          const hlData = htmlToJson(highlightedCode);
+          let lineNum = 1;
+          for (let i = 0; i < hlData.length; i++) {
+            const { text, color } = hlData[i];
+            if (i == 0 || hlData[i - 1]?.text === "\n")
+              doc.text(String(lineNum++).padStart(3, " "), { continued: true });
+            
+            if (text !== "\n") doc.text(text, { continued: true });
+            else doc.text(text);
+
+            if (color) doc.fillColor(color);
+            else doc.fillColor("black");
+          }
         }
       } else if (stat.isDirectory()) {
         await appendFilesToPdf(
