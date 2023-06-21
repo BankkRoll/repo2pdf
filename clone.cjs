@@ -35,7 +35,7 @@ async function askForRepoUrl() {
         {
             name: 'repoUrl',
             message: 'Please provide a GitHub repository URL:',
-            validate: function(value) {
+            validate: function (value) {
                 var pass = value.match(
                     /^https:\/\/github.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
                 );
@@ -55,7 +55,7 @@ async function askForRepoUrl() {
             name: 'keepRepo',
             message: 'Do you want to keep the cloned repository?',
             choices: ['Yes', 'No'],
-            filter: function(val) {
+            filter: function (val) {
                 return val.toLowerCase() === 'yes';
             }
         }
@@ -109,8 +109,8 @@ async function main(repoUrl, outputFileName, keepRepo) {
             const filePath = path.join(directory, file);
             const stat = await fsPromises.stat(filePath);
     
-            const excludedNames = ['.gitignore', '.gitmodules', 'package-lock.json', 'yarn.lock', '.git'];
-            const excludedExtensions = ['.png', '.yml', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp', '.ico', '.mp4', '.mov', '.avi', '.wmv'];
+            const excludedNames = ['.gitignore', '.gitmodules', 'package-lock.json', 'yarn.lock', '.git', 'infodata.json', ];
+            const excludedExtensions = ['.png', '.yml', '.jpg', '.jpeg', '.gif', '.svg', '.bmp', '.webp', '.ico', '.mp4', '.mov', '.avi', '.wmv', '.xml'];
     
             // Check if file or directory should be excluded
             if (excludedNames.includes(path.basename(filePath)) || excludedExtensions.includes(path.extname(filePath))) {
@@ -129,13 +129,21 @@ async function main(repoUrl, outputFileName, keepRepo) {
                     data = data.replace(/Ð/g, '\n');
                     data = data.replace(/\r\n/g, '\n');
                     data = data.replace(/\r/g, '\n');
+    
+                    let lines = data.split('\n');
+                    for (let i = 0; i < lines.length; i++) {
+                        let lineNumber = String(i + 1).padStart(3, ' ');
+                        lines[i] = `${lineNumber} ${lines[i]}`;
+                    }
+                    data = lines.join('\n');
+    
                     doc.addPage().font('Courier').fontSize(10).text(`${fileName}\n\n${data}`, { lineGap: 4 });
                 }
             } else if (stat.isDirectory()) {
                 await appendFilesToPdf(filePath);
             }
         }
-    }
+    }    
 
     doc.on('finish', () => {
         spinner.succeed(chalk.greenBright(`PDF created with ${fileCount} files processed.`));
