@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node dist/clone.js",
     "watch": "tsc -w",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
