@@ -8,6 +8,13 @@ const git = require("simple-git")
 const PDFDocument = require("pdfkit")
 const isBinaryFile = require("isbinaryfile").isBinaryFileSync
 
+// TODO IDEAS
+// TODO add option to condiotionaly remove comments from code
+// TODO add option to condiotionaly remove empty lines from code
+// TODO add option to condiotionaly add line numbers to code
+// TODO add option to condiotionaly add linting to code
+// TODO add option to make one pdf per file
+
 let chalk
 let inquirer
 let ora
@@ -63,9 +70,60 @@ async function askForRepoUrl() {
       },
     },
     {
+      name: "addLineNumbers",
+      message: "Do you want to add line numbers to the PDF?",
+      choices: ["Yes", "No"],
+      filter: function (val) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
+      name: "addLinting",
+      message: "Do you want to add linting to the PDF?",
+      choices: [/*"Yes",*/ "No"],
+      filter: function (val) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
+      name: "removeComments",
+      message: "Do you want to remove comments from the PDF?",
+      choices: [/*"Yes",*/ "No"],
+      filter: function (val) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
+      name: "removeEmptyLines",
+      message: "Do you want to remove empty lines from the PDF?",
+      choices: [/*"Yes",*/ "No"],
+      filter: function (val) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
+      name: "onePdfPerFile",
+      message: "Do you want to make one PDF per file?",
+      choices: [/*"Yes",*/ "No"],
+      filter: function (val) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
       name: "outputFileName",
       message: "Please provide an output file name:",
       default: "output.pdf",
+      when(answers) {
+        return !answers.onePdfPerFile
+      },
+    },
+    {
+      name: "outputFolderName",
+      message: "Please provide an output folder name:",
+      default: "./output",
+      when(answers) {
+        return answers.onePdfPerFile
+      },
     },
     {
       type: "list",
@@ -96,19 +154,31 @@ Welcome to Repo-to-PDF! Let's get started...
   console.log(chalk.cyanBright("\nProcessing your request...\n"))
   main(
     answers.repoUrl,
-    answers.outputFileName,
-    answers.keepRepo,
     answers.optionalExcludedNames,
-    answers.optionalExcludedExtensions
+    answers.optionalExcludedExtensions,
+    answers.addLineNumbers,
+    answers.addLinting,
+    answers.removeComments,
+    answers.removeEmptyLines,
+    answers.onePdfPerFile,
+    answers.outputFileName,
+    answers.outputFolderName,
+    answers.keepRepo
   )
 }
 
 async function main(
   repoUrl,
-  outputFileName,
-  keepRepo,
   optionalExcludedNames,
-  optionalExcludedExtensions
+  optionalExcludedExtensions,
+  addLineNumbers,
+  addLinting,
+  removeComments,
+  removeEmptyLines,
+  onePdfPerFile,
+  outputFileName,
+  outputFolderName,
+  keepRepo
 ) {
   const gitP = git()
   const tempDir = "./tempRepo"
@@ -123,7 +193,11 @@ async function main(
     .then(() => {
       spinner.succeed(chalk.greenBright("Repository cloned successfully"))
       spinner.start(chalk.blueBright("Processing files..."))
-      appendFilesToPdf(tempDir, optionalExcludedNames, optionalExcludedExtensions).then(() => {
+      appendFilesToPdf(
+        tempDir,
+        optionalExcludedNames,
+        optionalExcludedExtensions
+      ).then(() => {
         doc.end()
         spinner.succeed(
           chalk.greenBright(`PDF created with ${fileCount} files processed.`)
@@ -218,7 +292,11 @@ async function main(
             .text(`${fileName}\n\n${data}`, { lineGap: 4 })
         }
       } else if (stat.isDirectory()) {
-        await appendFilesToPdf(filePath, optionalExcludedNames, optionalExcludedExtensions)
+        await appendFilesToPdf(
+          filePath,
+          optionalExcludedNames,
+          optionalExcludedExtensions
+        )
       }
     }
   }
