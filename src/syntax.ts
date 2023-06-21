@@ -1,3 +1,5 @@
+import { decode } from "html-entities"
+
 /**
  * @param {string} htmlCode 
  */
@@ -33,7 +35,7 @@ export function htmlToJson(htmlCode: string): { text: string, color?: string }[]
         case "keyword":
         case "name":
         case "selector-tag":
-          color = "#7ddcfe";
+          color = "#32a2cb";
           break;
         case "deletion":
         case "number":
@@ -73,8 +75,8 @@ export function htmlToJson(htmlCode: string): { text: string, color?: string }[]
           color = "#38a";
           break;
       }
-      console.log({ type, text, color, fullText });
-      data.push({ text, color });
+      // console.log({ type, text, color, fullText });
+      data.push({ text: decode(text), color });
       htmlCode = htmlCode.slice(fullText.length);
     }
     else if (htmlCode.startsWith("</span>")) { // Failed ending from hljs
@@ -91,7 +93,7 @@ export function htmlToJson(htmlCode: string): { text: string, color?: string }[]
       const match = htmlCode.match(nonelementRegex);
       const text = match![0];
       htmlCode = htmlCode.slice(text.length);
-      data.push({ text });
+      data.push({ text: decode(text) });
     }
   }
 

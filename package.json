@@ -41,6 +41,7 @@
     "@types/pdfkit": "^0.12.10",
     "chalk": "^5.2.0",
     "highlight.js": "^11.8.0",
+    "html-entities": "^2.3.6",
     "inquirer": "^9.2.6",
     "isbinaryfile": "^5.0.0",
     "ora": "^6.3.1",

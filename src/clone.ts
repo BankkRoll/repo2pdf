@@ -162,7 +162,7 @@ async function askForRepoUrl() {
         type: "list",
         name: "keepRepo",
         message: "Do you want to keep the cloned repository?",
-        choices: ["Yes", "No"],
+        choices: ["No", "Yes"],
         filter: function (val: string) {
           return val.toLowerCase() === "yes"
         },
@@ -202,8 +202,8 @@ Welcome to Repo-to-PDF! Let's get started...
 
 async function main(
   repoUrl: string,
-  optionalExcludedNames: any,
-  optionalExcludedExtensions: any,
+  optionalExcludedNames: string[],
+  optionalExcludedExtensions: string[],
   addLineNumbers: any,
   addLinting: any,
   removeComments: any,
@@ -250,12 +250,16 @@ async function main(
 
   async function appendFilesToPdf(
     directory: string,
-    optionalExcludedNames: any,
-    optionalExcludedExtensions: any
+    optionalExcludedNames: string[],
+    optionalExcludedExtensions: string[]
   ) {
+    console.log(chalk.blueBright(`Processing ${directory}...`));
     const files = await fsPromises.readdir(directory)
+    console.log(chalk.blueBright(`Found ${files.length} files in ${directory}`));
+    
     for (let file of files) {
       const filePath = path.join(directory, file)
+      console.log(chalk.blueBright(`Processing ${filePath}...`));
       const stat = await fsPromises.stat(filePath)
 
       const excludedNames = [
@@ -265,7 +269,7 @@ async function main(
         "yarn.lock",
         ".git",
       ]
-      excludedNames.push(...optionalExcludedNames)
+      excludedNames.push(...optionalExcludedNames.filter(Boolean))
 
       const excludedExtensions = [
         ".png",
@@ -281,8 +285,9 @@ async function main(
         ".mov",
         ".avi",
         ".wmv",
+        ".pdf",
       ]
-      excludedExtensions.push(...optionalExcludedExtensions)
+      excludedExtensions.push(...optionalExcludedExtensions.filter(Boolean))
 
       // Check if file or directory should be excluded
       if (
@@ -317,22 +322,26 @@ async function main(
             .fontSize(10)
             .text(`${fileName}\n\n`, { lineGap: 4 })
 
-          const highlightedCode = hljs.highlight(data, { language: "ps1" }).value
+          const extension = path.extname(filePath).replace(".", "")
+          const highlightedCode = hljs.highlight(data, { language: extension }).value
           const hlData = htmlToJson(highlightedCode);
           let lineNum = 1;
+          const lineNumWidth = (hlData.filter((d) => d.text === "\n")).length.toString().length;
           for (let i = 0; i < hlData.length; i++) {
             const { text, color } = hlData[i];
             if (i == 0 || hlData[i - 1]?.text === "\n")
-              doc.text(String(lineNum++).padStart(3, " "), { continued: true });
+              doc.text(String(lineNum++).padStart(lineNumWidth, " ") + " ", { continued: true, textIndent: 0 });
+
+            if (color) doc.fillColor(color);
+            else doc.fillColor("black");
 
             if (text !== "\n") doc.text(text, { continued: true });
             else doc.text(text);
 
-            if (color) doc.fillColor(color);
-            else doc.fillColor("black");
           }
         }
       } else if (stat.isDirectory()) {
+        console.log(chalk.blueBright(`Processing new directory: ${filePath}...`));
         await appendFilesToPdf(
           filePath,
           optionalExcludedNames,
