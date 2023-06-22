@@ -119,10 +119,6 @@ export function htmlToJson(
         fixedData.push({ text: "\n" })
       }
 
-      // if (removeEmptyLines && line.trim() === "") {
-      //   continue
-      // }
-
       fixedData.push({ text: line, color })
     }
   }
