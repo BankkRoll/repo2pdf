@@ -259,7 +259,11 @@ async function main(
         }
 
         spinner.succeed(
-          chalk.greenBright(`PDF created with ${fileCount} files processed.`)
+          chalk.greenBright(
+            `${
+              onePdfPerFile ? "PDFs" : "PDF"
+            } created with ${fileCount} files processed.`
+          )
         )
         if (!keepRepo) {
           fs.rmSync(tempDir, { recursive: true, force: true })
