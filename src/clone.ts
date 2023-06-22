@@ -296,8 +296,8 @@ async function main(
         let fileName = path.relative(tempDir, filePath)
         if (isBinaryFileSync(filePath)) {
           const data = fs.readFileSync(filePath).toString("base64")
+          if (fileCount > 1) doc.addPage();
           doc
-            // .addPage() // Adds an accidental blank page, no good
             .font("Courier")
             .fontSize(10)
             .text(`${fileName}\n\nBASE64:\n\n${data}`, { lineGap: 4 })
@@ -308,8 +308,8 @@ async function main(
           data = data.replace(/\r/g, "\n")
           data = data.replace(/uþs/g, "")
 
+          doc.addPage();
           doc
-            .addPage()
             .font("Courier")
             .fontSize(10)
             .text(`${fileName}\n\n`, { lineGap: 4 })
