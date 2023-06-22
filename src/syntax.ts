@@ -4,8 +4,7 @@ import { decode } from "html-entities"
  * @param {string} htmlCode
  */
 export function htmlToJson(
-  htmlCode: string,
-  removeEmptyLines: boolean
+  htmlCode: string
 ): { text: string; color?: string }[] {
   /**
    * @type {{text: string, color?: string}[]}
@@ -120,9 +119,9 @@ export function htmlToJson(
         fixedData.push({ text: "\n" })
       }
 
-      if (removeEmptyLines && line.trim() === "") {
-        continue
-      }
+      // if (removeEmptyLines && line.trim() === "") {
+      //   continue
+      // }
 
       fixedData.push({ text: line, color })
     }

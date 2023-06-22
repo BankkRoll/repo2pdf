@@ -202,7 +202,7 @@ async function main(
   addHighlighting: any,
   addPageNumbers: any,
   removeComments: any,
-  removeEmptyLines: any,
+  removeEmptyLines: boolean,
   onePdfPerFile: any,
   outputFileName: fs.PathLike,
   outputFolderName: any,
@@ -318,6 +318,14 @@ async function main(
             data = strip(data)
           }
 
+          // Remove empty whitespace lines
+          if (removeEmptyLines) {
+            data = data.replace(/^\s*[\r\n]/gm, "")
+          }
+
+
+          
+
           const extension = path.extname(filePath).replace(".", "")
           let highlightedCode
           try {
@@ -329,7 +337,7 @@ async function main(
               language: "plaintext",
             }).value
           }
-          const hlData = htmlToJson(highlightedCode, removeEmptyLines)
+          const hlData = htmlToJson(highlightedCode)
           let lineNum = 1
           const lineNumWidth = hlData
             .filter((d) => d.text === "\n")
