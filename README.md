@@ -29,7 +29,12 @@ cd Repo-to-PDF
 npm install
 ```
 
-4. Run the script:
+4. Build the script
+```shell
+npm run build
+```
+
+5. Run the script:
 ```shell
 npm start
 ```
