@@ -101,8 +101,7 @@ npm install [package-name]
 ```
 
 **Q: How can I customize the styling of the generated PDF?**
-A: You can modify the code in `clone.cjs` to change the font, font size, colors, and other styling options for the PDF document.
-- Edit the `excludedExtensions` variable in `clone.cjs` to exclude certain file types from the PDF conversion.
+A: You can modify the code in `clone.ts` or `syntax.ts` to change the font, font size, colors, and other styling options for the PDF document.
 
 
 ## Contributing
