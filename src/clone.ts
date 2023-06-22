@@ -56,6 +56,7 @@ async function askForRepoUrl() {
       "repoUrl",
       "addLineNumbers",
       "addHighlighting",
+      "addPageNumbers",
       "removeComments",
       "removeEmptyLines",
       "onePdfPerFile",
@@ -96,6 +97,15 @@ async function askForRepoUrl() {
       type: "list",
       name: "addHighlighting",
       message: "Do you want to add highlighting to the PDF?",
+      choices: ["Yes", "No"],
+      filter: function (val: string) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
+      type: "list",
+      name: "addPageNumbers",
+      message: "Do you want to add page numbers to the PDF?",
       choices: ["Yes", "No"],
       filter: function (val: string) {
         return val.toLowerCase() === "yes"
@@ -175,6 +185,7 @@ Welcome to Repo-to-PDF! Let's get started...
     answers.repoUrl,
     answers.addLineNumbers,
     answers.addHighlighting,
+    answers.addPageNumbers,
     answers.removeComments,
     answers.removeEmptyLines,
     answers.onePdfPerFile,
@@ -188,6 +199,7 @@ async function main(
   repoUrl: string,
   addLineNumbers: any,
   addHighlighting: any,
+  addPageNumbers: any,
   removeComments: any,
   removeEmptyLines: any,
   onePdfPerFile: any,
@@ -222,16 +234,17 @@ async function main(
         for (let i = 0; i < pages.count; i++) {
           doc.switchToPage(i)
 
-          //Footer: Add page number
-          let oldBottomMargin = doc.page.margins.bottom
-          doc.page.margins.bottom = 0 //Dumb: Have to remove bottom margin in order to write into it
-          doc.text(
-            `Page: ${i + 1} of ${pages.count}`,
-            0,
-            doc.page.height - oldBottomMargin / 2, // Centered vertically in bottom margin
-            { align: "center" }
-          )
-          doc.page.margins.bottom = oldBottomMargin // ReProtect bottom margin
+          if (addPageNumbers) {
+            let oldBottomMargin = doc.page.margins.bottom
+            doc.page.margins.bottom = 0
+            doc.text(
+              `Page: ${i + 1} of ${pages.count}`,
+              0,
+              doc.page.height - oldBottomMargin / 2,
+              { align: "center" }
+            )
+            doc.page.margins.bottom = oldBottomMargin
+          }
         }
 
         doc.end()
@@ -258,8 +271,8 @@ async function main(
       const filePath = path.join(directory, file)
       const stat = await fsPromises.stat(filePath)
 
-      const excludedNames = [...universalExcludedNames]
-      const excludedExtensions = [...universalExcludedExtensions]
+      const excludedNames = universalExcludedNames
+      const excludedExtensions = universalExcludedExtensions
 
       if (ignoreConfig?.ignoredFiles)
         excludedNames.push(...ignoreConfig.ignoredFiles)
