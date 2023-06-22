@@ -124,8 +124,8 @@ async function askForRepoUrl() {
     {
       type: "list",
       name: "removeEmptyLines",
-      message: "Do you want to remove empty lines from the PDF? (This is causing some issues with indentaion)",
-      choices: ["No", "Yes"],
+      message: "Do you want to remove empty lines from the PDF?",
+      choices: ["Yes", "No"],
       filter: function (val: string) {
         return val.toLowerCase() === "yes"
       },
