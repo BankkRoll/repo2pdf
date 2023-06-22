@@ -1,4 +1,3 @@
 {
-    "ignoredFiles": ["tsconfig.json"],
-    "ignoredExtensions": [".ts"]
+    "ignoredFiles": ["tsconfig.json"]
 }

@@ -6,8 +6,14 @@ import path from "path"
 import git from "simple-git"
 import PDFDocument, { addPage } from "pdfkit"
 import { default as hljs } from "highlight.js"
-import { htmlToJson } from "./syntax"
 import { isBinaryFileSync } from "isbinaryfile"
+
+import { htmlToJson } from "./syntax"
+import loadIgnoreConfig, { IgnoreConfig } from "./loadIgnoreConfig"
+import {
+  universalExcludedExtensions,
+  universalExcludedNames,
+} from "./universalExcludes"
 
 //@ts-ignore
 import type chalkType from "chalk"
@@ -48,8 +54,6 @@ async function askForRepoUrl() {
     type?: string
     name: [
       "repoUrl",
-      "optionalExcludedNames",
-      "optionalExcludedExtensions",
       "addLineNumbers",
       "addHighlighting",
       "removeComments",
@@ -77,22 +81,6 @@ async function askForRepoUrl() {
           return true
         }
         return "Please enter a valid GitHub repository URL."
-      },
-    },
-    {
-      name: "optionalExcludedNames",
-      message:
-        "Please provide a list of file names to exclude, separated by commas:",
-      filter: function (value: string) {
-        return value.split(",").map((v) => v.trim())
-      },
-    },
-    {
-      name: "optionalExcludedExtensions",
-      message:
-        "Please provide a list of file extensions to exclude, separated by commas:",
-      filter: function (value: string) {
-        return value.split(",").map((v: string) => v.trim())
       },
     },
     {
@@ -185,8 +173,6 @@ Welcome to Repo-to-PDF! Let's get started...
   console.log(chalk.cyanBright("\nProcessing your request...\n"))
   main(
     answers.repoUrl,
-    answers.optionalExcludedNames,
-    answers.optionalExcludedExtensions,
     answers.addLineNumbers,
     answers.addHighlighting,
     answers.removeComments,
@@ -200,8 +186,6 @@ Welcome to Repo-to-PDF! Let's get started...
 
 async function main(
   repoUrl: string,
-  optionalExcludedNames: string[],
-  optionalExcludedExtensions: string[],
   addLineNumbers: any,
   addHighlighting: any,
   removeComments: any,
@@ -222,17 +206,17 @@ async function main(
   let fileCount = 0
   const spinner = ora(chalk.blueBright("Cloning repository...")).start()
 
+  let ignoreConfig: IgnoreConfig | null = null
+
   gitP
     .clone(repoUrl, tempDir)
-    .then(() => {
+    .then(async () => {
       spinner.succeed(chalk.greenBright("Repository cloned successfully"))
       spinner.start(chalk.blueBright("Processing files..."))
-      appendFilesToPdf(
-        tempDir,
-        optionalExcludedNames,
-        optionalExcludedExtensions,
-        removeComments
-      ).then(() => {
+
+      ignoreConfig = await loadIgnoreConfig(tempDir)
+
+      appendFilesToPdf(tempDir, removeComments).then(() => {
         //Global Edits to All Pages (Header/Footer, etc)
         let pages = doc.bufferedPageRange()
         for (let i = 0; i < pages.count; i++) {
@@ -267,44 +251,20 @@ async function main(
       console.error(err)
     })
 
-  async function appendFilesToPdf(
-    directory: string,
-    optionalExcludedNames: string[],
-    optionalExcludedExtensions: string[],
-    removeComments = false
-  ) {
+  async function appendFilesToPdf(directory: string, removeComments = false) {
     const files = await fsPromises.readdir(directory)
 
     for (let file of files) {
       const filePath = path.join(directory, file)
       const stat = await fsPromises.stat(filePath)
 
-      const excludedNames = [
-        ".gitignore",
-        ".gitmodules",
-        "package-lock.json",
-        "yarn.lock",
-        ".git",
-      ]
-      excludedNames.push(...optionalExcludedNames.filter(Boolean))
+      const excludedNames = [...universalExcludedNames]
+      const excludedExtensions = [...universalExcludedExtensions]
 
-      const excludedExtensions = [
-        ".png",
-        ".yml",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".svg",
-        ".bmp",
-        ".webp",
-        ".ico",
-        ".mp4",
-        ".mov",
-        ".avi",
-        ".wmv",
-        ".pdf",
-      ]
-      excludedExtensions.push(...optionalExcludedExtensions.filter(Boolean))
+      if (ignoreConfig?.ignoredFiles)
+        excludedNames.push(...ignoreConfig.ignoredFiles)
+      if (ignoreConfig?.ignoredExtensions)
+        excludedExtensions.push(...ignoreConfig.ignoredExtensions)
 
       // Check if file or directory should be excluded
       if (
@@ -373,12 +333,7 @@ async function main(
           }
         }
       } else if (stat.isDirectory()) {
-        await appendFilesToPdf(
-          filePath,
-          optionalExcludedNames,
-          optionalExcludedExtensions,
-          removeComments
-        )
+        await appendFilesToPdf(filePath, removeComments)
       }
     }
   }
