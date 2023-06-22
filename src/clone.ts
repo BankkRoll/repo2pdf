@@ -58,6 +58,7 @@ async function askForRepoUrl() {
       "addLineNumbers",
       "addHighlighting",
       "addPageNumbers",
+      "addTableOfContents",
       "removeComments",
       "removeEmptyLines",
       "onePdfPerFile",
@@ -105,15 +106,6 @@ async function askForRepoUrl() {
     },
     {
       type: "list",
-      name: "addPageNumbers",
-      message: "Do you want to add page numbers to the PDF?",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes"
-      },
-    },
-    {
-      type: "list",
       name: "removeComments",
       message:
         "Do you want to remove comments from the PDF? (Does not remove comments behind code on the same line)",
@@ -139,6 +131,30 @@ async function askForRepoUrl() {
       filter: function (val: string) {
         return val.toLowerCase() === "yes"
       },
+    },
+    {
+      type: "list",
+      name: "addPageNumbers",
+      message: "Do you want to add page numbers to the PDF?",
+      choices: ["Yes", "No"],
+      filter: function (val: string) {
+        return val.toLowerCase() === "yes"
+      },
+      when(answers: { onePdfPerFile: any }) {
+        return !answers.onePdfPerFile
+      },
+    },
+    {
+      type: "list",
+      name: "addTableOfContents",
+      message: "Do you want to add a table of contents to the PDF?",
+      choices: ["Yes", "No"],
+      filter: function (val: string) {
+        return val.toLowerCase() === "yes"
+      },
+      when(answers: { onePdfPerFile: any }) {
+        return !answers.onePdfPerFile
+      }
     },
     {
       name: "outputFileName",
@@ -188,6 +204,7 @@ Welcome to Repo-to-PDF! Let's get started...
     answers.addLineNumbers,
     answers.addHighlighting,
     answers.addPageNumbers,
+    answers.addTableOfContents,
     answers.removeComments,
     answers.removeEmptyLines,
     answers.onePdfPerFile,
@@ -202,6 +219,7 @@ async function main(
   addLineNumbers: any,
   addHighlighting: any,
   addPageNumbers: any,
+  addTableOfContents: any,
   removeComments: any,
   removeEmptyLines: boolean,
   onePdfPerFile: any,
