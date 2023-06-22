@@ -2,7 +2,6 @@
 import fs from "fs"
 const fsPromises = fs.promises
 import path from "path"
-import { execSync } from "child_process"
 
 import git from "simple-git"
 import PDFDocument, { addPage } from "pdfkit"
@@ -16,13 +15,6 @@ import type chalkType from "chalk"
 import type inquirerType from "inquirer"
 //@ts-ignore
 import type oraType from "ora"
-
-// TODO IDEAS
-// TODO add option to condiotionaly remove comments from code
-// TODO add option to condiotionaly remove empty lines from code
-// TODO add option to make one pdf per file
-// TODO add page numbers to pdf
-// TODO add table of contents to pdf
 
 let chalk: typeof chalkType
 let inquirer: typeof inquirerType
