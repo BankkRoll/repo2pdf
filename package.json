@@ -38,7 +38,6 @@
   "homepage": "https://github.com/BankkRoll/Repo-to-PDF#readme",
   "documentation": "https://github.com/BankkRoll/Repo-to-PDF#readme",
   "dependencies": {
-
     "chalk": "^5.2.0",
     "highlight.js": "^11.8.0",
     "html-entities": "^2.3.6",
@@ -48,7 +47,6 @@
     "pdfkit": "^0.13.0",
     "simple-git": "^3.18.0",
     "strip-comments": "^2.0.1"
-
   },
   "engines": {
     "node": ">=14.0.0"
