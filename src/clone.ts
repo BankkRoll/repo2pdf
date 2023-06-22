@@ -4,9 +4,10 @@ const fsPromises = fs.promises
 import path from "path"
 
 import git from "simple-git"
-import PDFDocument, { addPage } from "pdfkit"
+import PDFDocument from "pdfkit"
 import { default as hljs } from "highlight.js"
 import { isBinaryFileSync } from "isbinaryfile"
+import strip from "strip-comments"
 
 import { htmlToJson } from "./syntax"
 import loadIgnoreConfig, { IgnoreConfig } from "./loadIgnoreConfig"
@@ -114,8 +115,8 @@ async function askForRepoUrl() {
     {
       type: "list",
       name: "removeComments",
-      message: "Do you want to remove comments from the PDF?",
-      choices: ["No", "Yes"],
+      message: "Do you want to remove comments from the PDF? (Does not remove comments behind code on the same line)",
+      choices: ["Yes", "No"],
       filter: function (val: string) {
         return val.toLowerCase() === "yes"
       },
@@ -123,7 +124,7 @@ async function askForRepoUrl() {
     {
       type: "list",
       name: "removeEmptyLines",
-      message: "Do you want to remove empty lines from the PDF?",
+      message: "Do you want to remove empty lines from the PDF? (This is causing some issues with indentaion)",
       choices: ["No", "Yes"],
       filter: function (val: string) {
         return val.toLowerCase() === "yes"
@@ -313,6 +314,10 @@ async function main(
             .fontSize(10)
             .text(`${fileName}\n\n`, { lineGap: 4 })
 
+          if (removeComments) {
+            data = strip(data)
+          }
+
           const extension = path.extname(filePath).replace(".", "")
           let highlightedCode
           try {
@@ -324,7 +329,7 @@ async function main(
               language: "plaintext",
             }).value
           }
-          const hlData = htmlToJson(highlightedCode, removeComments)
+          const hlData = htmlToJson(highlightedCode, removeEmptyLines)
           let lineNum = 1
           const lineNumWidth = hlData
             .filter((d) => d.text === "\n")

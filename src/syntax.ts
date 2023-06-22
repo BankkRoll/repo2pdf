@@ -5,15 +5,15 @@ import { decode } from "html-entities"
  */
 export function htmlToJson(
   htmlCode: string,
-  removeComments: boolean
+  removeEmptyLines: boolean
 ): { text: string; color?: string }[] {
-  const originalCode = htmlCode
   /**
    * @type {{text: string, color?: string}[]}
    */
   const data: { text: string; color?: string }[] = []
   const elementRegex = /^<span\s+class="hljs-([^"]+)"[^>]*>([^<]*)(?:<\/span>)?/
   const nonelementRegex = /[^<]*/
+
   while (htmlCode) {
     const match = htmlCode.match(elementRegex)
     if (match) {
@@ -21,7 +21,6 @@ export function htmlToJson(
       const cls = match[1]
       const text = match[2]
       let color = "black"
-      // const color = cls;
       const type = cls.split(" ")[0].toLowerCase() ?? "unknown"
       switch (type) {
         case "comment":
@@ -78,13 +77,11 @@ export function htmlToJson(
           color = "#38a"
           break
       }
-      // console.log({ type, text, color, fullText });
       data.push({ text: decode(text), color })
       htmlCode = htmlCode.slice(fullText.length)
     } else if (htmlCode.startsWith("</span>")) {
       // Failed ending from hljs
       const text = "</span>"
-      data.push({ text: "" }) // Empty text on purpose
       htmlCode = htmlCode.slice(text.length)
     } else if (htmlCode.startsWith("\n")) {
       const text = "\n"
@@ -102,34 +99,30 @@ export function htmlToJson(
    * @type {{text: string, color?: string}[]}
    */
   const fixedData: { text: string; color?: string }[] = []
-
-  // BUG: REMOVE COMMENTS not working properly
-  // TODO: Remove new lines if removeNewLines is true
-  // Fix newlines and remove comments
-  let skipLine = false
+  // Fix newlines and empty lines if user wants to
   for (let i = 0; i < data.length; i++) {
     const { text, color } = data[i]
     const lines = text.split("\n")
-
     for (let j = 0; j < lines.length; j++) {
       const line = lines[j]
 
-      // Skip the current line if a comment was encountered and removeComments is true
-      if (removeComments && skipLine) {
-        skipLine = false
-        if (j !== lines.length - 1) {
-          // Don't skip if it's the last element (which is usually empty after split)
-          continue
-        }
+      if (
+        line.trim() === "" &&
+        j > 0 &&
+        lines[j - 1] === "" &&
+        j < lines.length - 1 &&
+        lines[j + 1] === ""
+      ) {
+        continue
       }
 
-      // Mark for skipping the next line if a comment is encountered
-      if (color === "#697070") {
-        // assuming color '#697070' indicates comments
-        skipLine = true
+      if (j > 0 && fixedData[fixedData.length - 1]?.text !== "\n") {
+        fixedData.push({ text: "\n" })
       }
 
-      if (j > 0) fixedData.push({ text: "\n" })
+      if (removeEmptyLines && line.trim() === "") {
+        continue
+      }
 
       fixedData.push({ text: line, color })
     }
