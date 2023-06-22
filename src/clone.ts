@@ -297,7 +297,7 @@ async function main(
         if (isBinaryFileSync(filePath)) {
           const data = fs.readFileSync(filePath).toString("base64")
           doc
-            .addPage()
+            // .addPage() // Adds an accidental blank page, no good
             .font("Courier")
             .fontSize(10)
             .text(`${fileName}\n\nBASE64:\n\n${data}`, { lineGap: 4 })
