@@ -1,0 +1,4 @@
+{
+    "ignoredFiles": ["tsconfig.json"],
+    "ignoredExtensions": [".md"]
+}

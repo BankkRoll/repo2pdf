@@ -29,7 +29,12 @@ cd Repo-to-PDF
 npm install
 ```
 
-4. Run the script:
+4. Build the script
+```shell
+npm run build
+```
+
+5. Run the script:
 ```shell
 npm start
 ```
@@ -55,7 +60,15 @@ Once you have installed Repo-to-PDF, you can use it to generate PDF files from G
 
 You will be prompted to provide the following information:
 - The URL of the GitHub repository
-- The name of the output PDF file
+- Whether or not you want line numbers in the pdf
+- Whether or not you want highlighting in the pdf
+- Whether or not you want to remove comments from the code
+- Whether or not you want to remove empty lines from the code
+- Whether or not you want one big file or one PDF pr. file in your repo
+  - When picking one big file you get 2 extra options:
+    - Whether or not you want to add page numbers
+    - Whether or not you want to add a table of contents
+- The name of the output PDF file or output directory
 - Whether or not you wish to keep the cloned repository after generating the PDF
 
 The script will then clone the repository, process the files, and generate a PDF document based on the provided information.
@@ -63,9 +76,20 @@ The script will then clone the repository, process the files, and generate a PDF
 Please note that you need to have Node.js installed on your system in order to run Repo-to-PDF.
 
 
+
 ## Configuration
 
-Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). To customize the files and directories to ignore, edit the `excludedNames` and `excludedExtensions` variables in `clone.cjs`.
+Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). 
+To customize the files and directories to ignore, you can add a `repo2pdf.ignore` file to the root of your repository.
+
+### Example of file structure
+
+```json
+{
+    "ignoredFiles": ["tsconfig.json"],
+    "ignoredExtensions": [".md"]
+}
+```
 
 
 ## Troubleshooting / FAQ
@@ -77,8 +101,7 @@ npm install [package-name]
 ```
 
 **Q: How can I customize the styling of the generated PDF?**
-A: You can modify the code in `clone.cjs` to change the font, font size, colors, and other styling options for the PDF document.
-- Edit the `excludedExtensions` variable in `clone.cjs` to exclude certain file types from the PDF conversion.
+A: You can modify the code in `clone.ts` or `syntax.ts` to change the font, font size, colors, and other styling options for the PDF document.
 
 
 ## Contributing
