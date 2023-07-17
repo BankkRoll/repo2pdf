@@ -67,7 +67,7 @@ You will be prompted to provide the following information:
 - Whether or not you want one big file or one PDF pr. file in your repo
   - When picking one big file you get 2 extra options:
     - Whether or not you want to add page numbers
-    - Whether or not you want to add a table of contents
+    - Whether or not you want to add a table of contents (Coming in the future)
 - The name of the output PDF file or output directory
 - Whether or not you wish to keep the cloned repository after generating the PDF
 
