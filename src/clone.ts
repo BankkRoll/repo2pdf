@@ -375,7 +375,6 @@ async function main(
               const { text, color } = hlData[i]
               if (i == 0 || hlData[i - 1]?.text === "\n")
                 if (addLineNumbers) {
-                  doc.text("\n", { continued: true })
                   doc.text(
                     String(lineNum++).padStart(lineNumWidth, " ") + " ",
                     {
