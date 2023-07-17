@@ -1,6 +1,6 @@
 {
   "name": "repo2pdf",
-  "version": "2.0.0",
+  "version": "2.0.3",
   "description": "A Node.js utility for generating a PDF document from a GitHub repository",
   "main": "dist/clone.js",
   "bin": {
@@ -56,5 +56,14 @@
     "@types/inquirer": "^9.0.3",
     "@types/pdfkit": "^0.12.10",
     "typescript": "^5.1.3"
-  }
+  },
+  "contributors": [
+    {
+      "name": "malpou",
+      "url": "https://github.com/malpou"
+    },
+    { "name": "LucasionGS",
+      "url": "https://github.com/LucasionGS"
+    }
+  ]
 }

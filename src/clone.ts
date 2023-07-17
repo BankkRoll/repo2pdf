@@ -358,13 +358,17 @@ async function main(
             const extension = path.extname(filePath).replace(".", "")
             let highlightedCode
             try {
-              highlightedCode = hljs.highlight(data, {
-                language: addHighlighting ? extension : "plaintext",
-              }).value
+              // Check if language is supported before attempting to highlight
+              if (addHighlighting && hljs.getLanguage(extension)) {
+                highlightedCode = hljs.highlight(data, { language: extension }).value
+              } else {
+                // Use plaintext highlighting if language is not supported
+                highlightedCode = hljs.highlight(data, { language: "plaintext" }).value
+              }
             } catch (error) {
-              highlightedCode = hljs.highlight(data, {
-                language: "plaintext",
-              }).value
+              console.error(`Error highlighting code: ${error}`)
+              // Use plaintext highlighting if an error occurs
+              highlightedCode = hljs.highlight(data, { language: "plaintext" }).value
             }
             const hlData = htmlToJson(highlightedCode)
             let lineNum = 1
