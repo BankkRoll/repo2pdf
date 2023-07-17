@@ -58,7 +58,6 @@ async function askForRepoUrl() {
       "addLineNumbers",
       "addHighlighting",
       "addPageNumbers",
-      "addTableOfContents",
       "removeComments",
       "removeEmptyLines",
       "onePdfPerFile",
@@ -145,18 +144,6 @@ async function askForRepoUrl() {
       },
     },
     {
-      type: "list",
-      name: "addTableOfContents",
-      message: "Do you want to add a table of contents to the PDF?",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes"
-      },
-      when(answers: { onePdfPerFile: any }) {
-        return !answers.onePdfPerFile
-      }
-    },
-    {
       name: "outputFileName",
       message: "Please provide an output file name:",
       default: "output.pdf",
@@ -204,7 +191,6 @@ Welcome to Repo-to-PDF! Let's get started...
     answers.addLineNumbers,
     answers.addHighlighting,
     answers.addPageNumbers,
-    answers.addTableOfContents,
     answers.removeComments,
     answers.removeEmptyLines,
     answers.onePdfPerFile,
@@ -219,7 +205,6 @@ async function main(
   addLineNumbers: any,
   addHighlighting: any,
   addPageNumbers: any,
-  addTableOfContents: any,
   removeComments: any,
   removeEmptyLines: boolean,
   onePdfPerFile: any,
@@ -390,6 +375,7 @@ async function main(
               const { text, color } = hlData[i]
               if (i == 0 || hlData[i - 1]?.text === "\n")
                 if (addLineNumbers) {
+                  doc.text("\n", { continued: true })
                   doc.text(
                     String(lineNum++).padStart(lineNumWidth, " ") + " ",
                     {
