@@ -409,7 +409,6 @@ async function main(
                 }).value
               }
             } catch (error) {
-              console.error(`Error highlighting code: ${error}`)
               // Use plaintext highlighting if an error occurs
               highlightedCode = hljs.highlight(data, {
                 language: "plaintext",
