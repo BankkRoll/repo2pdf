@@ -58,8 +58,10 @@ Once you have installed Repo-to-PDF, you can use it to generate PDF files from G
 
 1. The script will install and start running. You will just follow the prompt:
 
-You will be prompted to provide the following information:
-- The URL of the GitHub repository
+You will be prompted to provide the following information:'
+- Whether or not you want to clone a repository or use a local repository
+  - The path to the local repository (if you chose to use a local repository)
+  - The URL of the repository you want to clone (if you chose to clone a repository)
 - Whether or not you want line numbers in the pdf
 - Whether or not you want highlighting in the pdf
 - Whether or not you want to remove comments from the code
@@ -81,6 +83,8 @@ Please note that you need to have Node.js installed on your system in order to r
 
 Repo-to-PDF automatically ignores certain file types and directories (e.g., `.png`, `.git`). 
 To customize the files and directories to ignore, you can add a `repo2pdf.ignore` file to the root of your repository.
+
+Please note that if you use a local repository, the `repo2pdf.ignore` file must be in the root of the repository directory. And you might need to add more directories to the ignore list, as the script not automatically ignores different build files and directories.
 
 ### Example of file structure
 

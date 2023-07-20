@@ -5,6 +5,10 @@ const universalExcludedNames = [
   "yarn.lock",
   ".git",
   "repo2pdf.ignore",
+  ".vscode",
+  ".idea",
+  ".vs",
+  "node_modules",
 ]
 
 const universalExcludedExtensions = [

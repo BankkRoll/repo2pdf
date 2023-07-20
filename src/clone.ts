@@ -41,7 +41,7 @@ Promise.all([
     chalk = chalkModule
     inquirer = inquirerModule
     spinner.succeed("Setup complete")
-    askForRepoUrl()
+    configQuestions()
   })
   .catch((err) => {
     spinnerPromise.then((spinner) => {
@@ -50,10 +50,12 @@ Promise.all([
     console.error(err)
   })
 
-async function askForRepoUrl() {
+async function configQuestions() {
   const questions: {
     type?: string
     name: [
+      "localRepo",
+      "localRepoPath",
       "repoUrl",
       "addLineNumbers",
       "addHighlighting",
@@ -73,8 +75,34 @@ async function askForRepoUrl() {
     when?: (answers: any) => boolean
   }[] = [
     {
+      type: "list",
+      name: "localRepo",
+      message: "Do you want to use a local repository?",
+      choices: ["Yes", "No"],
+      filter: function (val: string) {
+        return val.toLowerCase() === "yes"
+      },
+    },
+    {
+      name: "localRepoPath",
+      message: "Please provide the full path to the local repository:",
+      when(answers: { localRepo: any }) {
+        return answers.localRepo
+      },
+      validate: function (value: string) {
+        if (fs.existsSync(value)) {
+          return true
+        } else {
+          return "Please enter a valid directory path."
+        }
+      },
+    },
+    {
       name: "repoUrl",
       message: "Please provide a GitHub repository URL:",
+      when(answers: { localRepo: any }) {
+        return !answers.localRepo
+      },
       validate: function (value: string) {
         var pass = value.match(
           /^https:\/\/github.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
@@ -164,6 +192,9 @@ async function askForRepoUrl() {
       name: "keepRepo",
       message: "Do you want to keep the cloned repository?",
       choices: ["No", "Yes"],
+      when(answers: { localRepo: any }) {
+        return !answers.localRepo
+      },
       filter: function (val: string) {
         return val.toLowerCase() === "yes"
       },
@@ -187,7 +218,8 @@ Welcome to Repo-to-PDF! Let's get started...
   const answers = await inquirer.prompt(questions)
   console.log(chalk.cyanBright("\nProcessing your request...\n"))
   main(
-    answers.repoUrl,
+    answers.localRepo ? answers.localRepoPath : answers.repoUrl,
+    answers.localRepo,
     answers.addLineNumbers,
     answers.addHighlighting,
     answers.addPageNumbers,
@@ -201,7 +233,8 @@ Welcome to Repo-to-PDF! Let's get started...
 }
 
 async function main(
-  repoUrl: string,
+  repoPath: string,
+  useLocalRepo: boolean,
   addLineNumbers: any,
   addHighlighting: any,
   addPageNumbers: any,
@@ -213,7 +246,7 @@ async function main(
   keepRepo: any
 ) {
   const gitP = git()
-  const tempDir = "./tempRepo"
+  let tempDir = "./tempRepo"
 
   let doc: typeof PDFDocument | null = null
   if (!onePdfPerFile) {
@@ -225,61 +258,67 @@ async function main(
   }
 
   let fileCount = 0
-  const spinner = ora(chalk.blueBright("Cloning repository...")).start()
 
   let ignoreConfig: IgnoreConfig | null = null
 
-  gitP
-    .clone(repoUrl, tempDir)
-    .then(async () => {
+  const spinner = ora(chalk.blueBright("Setting everything up...")).start()
+
+  try {
+    if (useLocalRepo) {
+      tempDir = repoPath
+    } else {
+      spinner.start(chalk.blueBright("Cloning repository..."))
+
+      await gitP.clone(repoPath, tempDir)
       spinner.succeed(chalk.greenBright("Repository cloned successfully"))
-      spinner.start(chalk.blueBright("Processing files..."))
+    }
 
-      ignoreConfig = await loadIgnoreConfig(tempDir)
+    spinner.start(chalk.blueBright("Processing files..."))
 
-      appendFilesToPdf(tempDir, removeComments).then(() => {
-        if (!onePdfPerFile) {
-          if (doc) {
-            //Global Edits to All Pages (Header/Footer, etc)
-            let pages = doc.bufferedPageRange()
-            for (let i = 0; i < pages.count; i++) {
-              doc.switchToPage(i)
+    ignoreConfig = await loadIgnoreConfig(tempDir)
 
-              if (addPageNumbers) {
-                let oldBottomMargin = doc.page.margins.bottom
-                doc.page.margins.bottom = 0
-                doc.text(
-                  `Page: ${i + 1} of ${pages.count}`,
-                  0,
-                  doc.page.height - oldBottomMargin / 2,
-                  { align: "center" }
-                )
-                doc.page.margins.bottom = oldBottomMargin
-              }
-            }
-            doc?.end()
+    await appendFilesToPdf(tempDir, removeComments)
+
+    if (!onePdfPerFile) {
+      if (doc) {
+        let pages = doc.bufferedPageRange()
+        for (let i = 0; i < pages.count; i++) {
+          doc.switchToPage(i)
+
+          if (addPageNumbers) {
+            let oldBottomMargin = doc.page.margins.bottom
+            doc.page.margins.bottom = 0
+            doc.text(
+              `Page: ${i + 1} of ${pages.count}`,
+              0,
+              doc.page.height - oldBottomMargin / 2,
+              { align: "center" }
+            )
+            doc.page.margins.bottom = oldBottomMargin
           }
         }
+        doc?.end()
+      }
+    }
 
-        spinner.succeed(
-          chalk.greenBright(
-            `${
-              onePdfPerFile ? "PDFs" : "PDF"
-            } created with ${fileCount} files processed.`
-          )
-        )
-        if (!keepRepo) {
-          fs.rmSync(tempDir, { recursive: true, force: true })
-          spinner.succeed(
-            chalk.greenBright("Temporary repository has been deleted.")
-          )
-        }
-      })
-    })
-    .catch((err) => {
-      spinner.fail(chalk.redBright("An error occurred"))
-      console.error(err)
-    })
+    spinner.succeed(
+      chalk.greenBright(
+        `${
+          onePdfPerFile ? "PDFs" : "PDF"
+        } created with ${fileCount} files processed.`
+      )
+    )
+
+    if (!keepRepo && !useLocalRepo) {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+      spinner.succeed(
+        chalk.greenBright("Temporary repository has been deleted.")
+      )
+    }
+  } catch (err) {
+    spinner.fail(chalk.redBright("An error occurred"))
+    console.error(err)
+  }
 
   async function appendFilesToPdf(directory: string, removeComments = false) {
     const files = await fsPromises.readdir(directory)
@@ -360,14 +399,20 @@ async function main(
             try {
               // Check if language is supported before attempting to highlight
               if (addHighlighting && hljs.getLanguage(extension)) {
-                highlightedCode = hljs.highlight(data, { language: extension }).value
+                highlightedCode = hljs.highlight(data, {
+                  language: extension,
+                }).value
               } else {
                 // Use plaintext highlighting if language is not supported
-                highlightedCode = hljs.highlight(data, { language: "plaintext" }).value
+                highlightedCode = hljs.highlight(data, {
+                  language: "plaintext",
+                }).value
               }
             } catch (error) {
               // Use plaintext highlighting if an error occurs
-              highlightedCode = hljs.highlight(data, { language: "plaintext" }).value
+              highlightedCode = hljs.highlight(data, {
+                language: "plaintext",
+              }).value
             }
             const hlData = htmlToJson(highlightedCode)
             let lineNum = 1
