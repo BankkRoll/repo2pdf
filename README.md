@@ -33,26 +33,27 @@ Repo-to-PDF is a tool that allows you to convert a GitHub repository into a PDF 
 
 
 
-## Installation
+## Installation and Usage
 
-To use Repo-to-PDF, you have two options: cloning the repository from GitHub or installing it directly using NPX. Choose the method that suits you best.
+Repo-to-PDF can be installed by either cloning the repository from GitHub or directly using NPX. The steps and prompts vary based on the chosen method.
 
+### Installing and Using Repo-to-PDF with NPX
 
-### Installing with NPX
-This will download and install the latest version of Repo-to-PDF from the NPM registry.
+This method downloads and installs the latest version of Repo-to-PDF from the NPM registry.
 
 1. Install Repo-to-PDF using NPX:
 ```shell
 npx repo2pdf
 ```
 
-2. Run Repo-to-PDF:
-```shell
-repo2pdf
-```
+2. The script will start running. Follow the prompt and provide the necessary information:
+   - GitHub repository URL
+   - Output file name
+   - Decision on whether to keep the cloned repository (Y/N)
 
+### Installing and Using Repo-to-PDF by Cloning the Repository
 
-### Cloning the Repository
+This method involves manually cloning the Repo-to-PDF repository and setting it up on your local machine.
 
 1. Clone the repository:
 ```shell
@@ -69,7 +70,7 @@ cd Repo-to-PDF
 npm install
 ```
 
-4. Build the script
+4. Build the script:
 ```shell
 npm run build
 ```
@@ -79,32 +80,22 @@ npm run build
 npm start
 ```
 
-
-## Usage
-
-Once you have installed Repo-to-PDF, you can use it to generate PDF files from GitHub repositories.
-
-1. The script will install and start running. You will just follow the prompt:
-
-You will be prompted to provide the following information:'
-- Whether or not you want to clone a repository or use a local repository
-  - The path to the local repository (if you chose to use a local repository)
-  - The URL of the repository you want to clone (if you chose to clone a repository)
-- Whether or not you want line numbers in the pdf
-- Whether or not you want highlighting in the pdf
-- Whether or not you want to remove comments from the code
-- Whether or not you want to remove empty lines from the code
-- Whether or not you want one big file or one PDF pr. file in your repo
-  - When picking one big file you get 2 extra options:
-    - Whether or not you want to add page numbers
-    - Whether or not you want to add a table of contents (Coming in the future)
-- The name of the output PDF file or output directory
-- Whether or not you wish to keep the cloned repository after generating the PDF
-
-The script will then clone the repository, process the files, and generate a PDF document based on the provided information.
+6. The script will start running. Follow the prompt and provide the necessary information:
+   - Decision on whether to clone a repository or use a local repository
+     - If using a local repository, provide the path
+     - If cloning a repository, provide the URL
+   - Decision on whether to include line numbers in the PDF
+   - Decision on whether to include highlighting in the PDF
+   - Decision on whether to remove comments from the code
+   - Decision on whether to remove empty lines from the code
+   - Decision on whether to have one large file or one PDF per file in your repo
+     - If choosing one large file, you have two additional options:
+       - Whether to add page numbers
+       - Whether to add a table of contents (this feature is coming in the future)
+   - Name of the output PDF file or output directory
+   - Decision on whether to keep the cloned repository after generating the PDF
 
 Please note that you need to have Node.js installed on your system in order to run Repo-to-PDF.
-
 
 
 ## Configuration
