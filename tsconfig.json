@@ -2,18 +2,14 @@
   "compilerOptions": {
     "target": "es2016",
     "module": "CommonJS",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
+    "moduleResolution": "Node16",
     "sourceMap": true,
-    "declaration": true,
-    "removeComments": true
+    "outDir": "./dist",
+    "sourceRoot": "./src",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
