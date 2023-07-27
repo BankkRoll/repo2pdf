@@ -1,69 +1,55 @@
 {
-  "name": "repo2pdf",
-  "version": "2.1.3",
-  "description": "A Node.js utility for generating a PDF document from a GitHub repository",
-  "main": "dist/clone.js",
+  "name": "nextension",
+  "version": "1.1.5",
+  "description": "A CLI tool to build Next.js applications as Chrome extensions",
+  "main": "dist/build.js",
   "bin": {
-    "repo2pdf": "dist/clone.js"
+    "nextension": "./dist/cli.js"
   },
   "scripts": {
-    "start": "node dist/clone.js",
-    "watch": "tsc -w",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/BankkRoll/Repo-to-PDF.git"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "github",
-    "repository",
-    "pdf",
-    "clone",
-    "nodejs",
-    "convert",
-    "document",
-    "langchain",
-    "openai",
-    "chatgpt",
-    "utility",
-    "tool"
+    "nextjs",
+    "chrome",
+    "extension",
+    "build",
+    "cli"
   ],
-  "author": "BankkRoll",
+  "author": "BankkRoll <https://github.com/BankkRoll>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bankkroll/nextension.git"
+  },
   "bugs": {
-    "url": "https://github.com/BankkRoll/Repo-to-PDF/issues"
+    "url": "https://github.com/Bankkroll/nextension/issues"
   },
-  "homepage": "https://github.com/BankkRoll/Repo-to-PDF#readme",
-  "documentation": "https://github.com/BankkRoll/Repo-to-PDF#readme",
-  "dependencies": {
-    "chalk": "^5.2.0",
-    "highlight.js": "^11.8.0",
-    "html-entities": "^2.3.6",
-    "inquirer": "^9.2.6",
-    "isbinaryfile": "^5.0.0",
-    "ora": "^6.3.1",
-    "pdfkit": "^0.13.0",
-    "simple-git": "^3.18.0",
-    "strip-comments": "^2.0.1"
-  },
+  "homepage": "https://github.com/Bankkroll/nextension#readme",
   "engines": {
     "node": ">=14.0.0"
   },
   "devDependencies": {
-    "@types/strip-comments": "^2.0.1",
+    "@types/fs-extra": "^11.0.1",
     "@types/inquirer": "^9.0.3",
-    "@types/pdfkit": "^0.12.10",
-    "typescript": "^5.1.3"
+    "@types/js-beautify": "^1.13.3",
+    "@types/node": "^20.4.5",
+    "@types/ora": "^3.2.0",
+    "@types/yargs": "^17.0.5",
+    "typescript": "^5.1.6",
+    "yargs": "^17.7.2"
   },
-  "contributors": [
-    {
-      "name": "malpou",
-      "url": "https://github.com/malpou"
-    },
-    { "name": "LucasionGS",
-      "url": "https://github.com/LucasionGS"
-    }
-  ]
+  "dependencies": {
+    "@types/execa": "^2.0.0",
+    "chalk": "^5.3.0",
+    "execa": "^7.2.0",
+    "fs-extra": "^11.1.1",
+    "glob": "^10.3.3",
+    "inquirer": "^8.2.0",
+    "js-beautify": "^1.13.3",
+    "ora": "^6.3.1",
+    "path": "^0.12.7"
+  }
 }
