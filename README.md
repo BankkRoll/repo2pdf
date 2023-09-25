@@ -3,7 +3,12 @@
 ![npm](https://img.shields.io/npm/v/repo2pdf)
 ![npm](https://img.shields.io/npm/dt/repo2pdf)
 ![NPM](https://img.shields.io/npm/l/repo2pdf)
+![GitHub Stars](https://img.shields.io/github/stars/BankkRoll/repo2pdf)
+![GitHub Forks](https://img.shields.io/github/forks/BankkRoll/repo2pdf)
 ![GitHub issues](https://img.shields.io/github/issues/BankkRoll/repo2pdf)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/BankkRoll/repo2pdf)
+![GitHub top language](https://img.shields.io/github/languages/top/BankkRoll/repo2pdf)
+![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
 
 repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
 
@@ -50,7 +55,7 @@ repo2pdf is an innovative and versatile tool designed to seamlessly transform Gi
 
 ## Installation and Usage
 
-repo2pdf can be installed by either cloning the repository from GitHub or directly using NPX. The steps and prompts vary based on the chosen method.
+repo2pdf can be installed by either [directly using NPX](#installing-and-using-repo2pdf-with-npx) or [cloning the repository from GitHub](#installing-and-using-repo2pdf-by-cloning-the-repository). The steps and prompts vary based on the chosen method.
 
 ---
 
@@ -59,6 +64,7 @@ repo2pdf can be installed by either cloning the repository from GitHub or direct
 This method downloads and installs the latest version of repo2pdf from the NPM registry.
 
 1. Install repo2pdf using NPX:
+
 ```shell
 npx repo2pdf
 ```
@@ -75,26 +81,31 @@ npx repo2pdf
 This method involves manually cloning the repo2pdf repository and setting it up on your local machine.
 
 1. Clone the repository:
+
 ```shell
 git clone https://github.com/BankkRoll/repo2pdf
 ```
 
 2. Navigate to the repo2pdf directory:
+
 ```shell
 cd repo2pdf
 ```
 
 3. Install the dependencies:
+
 ```shell
 npm install
 ```
 
 4. Build the script:
+
 ```shell
 npm run build
 ```
 
 5. Run the script:
+
 ```shell
 npm start
 ```
@@ -120,18 +131,17 @@ Please note that you need to have Node.js installed on your system in order to r
 
 ## Configuration
 
-repo2pdf automatically ignores certain file types and directories (e.g., `.png`, `.git`). 
+repo2pdf automatically ignores certain file types and directories (e.g., `.png`, `.git`).
 To customize the files and directories to ignore, you can add a `repo2pdf.ignore` file to the root of your repository.
 
 Please note that if you use a local repository, the `repo2pdf.ignore` file must be in the root of the repository directory. And you might need to add more directories to the ignore list, as the script not automatically ignores different build files and directories.
-
 
 ### Example of file structure
 
 ```json
 {
-    "ignoredFiles": ["tsconfig.json"],
-    "ignoredExtensions": [".md"]
+  "ignoredFiles": ["tsconfig.json"],
+  "ignoredExtensions": [".md"]
 }
 ```
 
@@ -143,9 +153,9 @@ Please note that if you use a local repository, the `repo2pdf.ignore` file must 
   <summary>Q: I'm getting an error "Failed to install [package-name]". What should I do?</summary>
   A: Make sure you have Node.js and npm installed on your system. Try running the following command to install the required package manually:
 
-  ```shell
-  npm install [package-name]
-  ```
+```shell
+npm install [package-name]
+```
 
 </details>
 
@@ -153,10 +163,10 @@ Please note that if you use a local repository, the `repo2pdf.ignore` file must 
   <summary>Q: How can I customize the styling of the generated PDF?</summary>
   A: You can modify the code in `clone.ts` or `syntax.ts` to change the font, font size, colors, and other styling options for the PDF document.
 
-  ```typescript
-  // Example: Changing font size in syntax.ts
-  doc.fontSize(12);
-  ```
+```typescript
+// Example: Changing font size in syntax.ts
+doc.fontSize(12);
+```
 
 </details>
 
@@ -169,12 +179,12 @@ Please note that if you use a local repository, the `repo2pdf.ignore` file must 
   <summary>Q: How can I modify the ignored files list?</summary>
   A: You can add a `repo2pdf.ignore` file to the root of your repository to customize the list of ignored files. Here's an example of how to structure this file:
 
-  ```json
-  {
-    "ignoredFiles": ["tsconfig.json"],
-    "ignoredExtensions": [".md"]
-  }
-  ```
+```json
+{
+  "ignoredFiles": ["tsconfig.json"],
+  "ignoredExtensions": [".md"]
+}
+```
 
 </details>
 
@@ -199,7 +209,6 @@ Please note that if you use a local repository, the `repo2pdf.ignore` file must 
 
 **Your insights, skills, and valuable time can make a huge difference in the evolution of repo2pdf!** We're always excited to see the community helping in shaping this tool to be even more efficient and feature-rich.
 
-
 ### Reporting Bugs
 
 Encountered a hiccup? We're here to help! Please:
@@ -208,14 +217,12 @@ Encountered a hiccup? We're here to help! Please:
 2. Describe the problem in depth. Share the steps to reproduce the issue and any error messages you received.
 3. If possible, provide information about your operating system and Node.js version.
 
-
 ### Suggesting Enhancements
 
 Have a brilliant idea for a new feature or an improvement to an existing one? We're all ears! Please:
 
 1. Open an issue on GitHub to share your suggestions.
 2. Be as detailed as possible, explaining what you want to achieve and why it would be beneficial to the project.
-
 
 ### Writing Code
 
@@ -232,10 +239,7 @@ Here are some feature ideas and improvements that could be implemented in repo2p
 
 - **Table of Contents Generation:** Auto-generate sections based on directories and subsections based on files.
 - **Customizable Themes:** Enable customizations for fonts, colors, and layout of the generated PDF.
-- **Selective File Inclusion:** Add the feature to include specific files or directories from the repository.
-- **Parallel Processing:** Leverage multi-threading or worker threads for faster conversion of large repositories.
 - **Interactive Progress Bar:** Show a real-time progress bar in the terminal during the conversion process.
-- **Syntax Theme Customization:** Support popular syntax highlighting themes like Monokai, Dracula, etc.
 - **Support for Private Repositories:** Implement OAuth2 GitHub authentication for private repositories.
 - **Enhanced Error Handling:** Provide clear error messages when a repository cannot be cloned.
 - **Conversion Options Presets:** Define presets like 'minimalist': no line numbers, no highlighting, 'full-featured': line numbers, syntax highlighting.
@@ -258,24 +262,19 @@ We're ever grateful for the valuable contributions from our community. Meet the 
 
 ## Project Structure
 
-<div align="center">
-
-| Type | File/Folder | Description |
-| ---- | ----------- | ----------- |
-| 📂 | [src/](https://github.com/BankkRoll/repo2pdf/tree/main/src) | The home of all source files. This is where the magic happens, transforming repositories into beautiful PDFs. |
-| 📂/📄 | [src/clone.ts](https://github.com/BankkRoll/repo2pdf/blob/main/src/clone.ts) | This script is the workhorse of the project, taking care of cloning the repository and kick-starting the conversion to PDF. |
-| 📂/📄 | [src/configHandler.ts](https://github.com/BankkRoll/repo2pdf/blob/main/src/configHandler.ts) | Like a conductor leading an orchestra, this script manages all configuration-related tasks and coordinates the interactions with the user. |
-| 📂/📄 | [src/loadIgnoreConfig.ts](https://github.com/BankkRoll/repo2pdf/blob/main/src/loadIgnoreConfig.ts) | Think of this script as the gatekeeper. It loads the ignore configuration file and ensures that unneeded files and directories are left out of the conversion process. |
-| 📂/📄 | [src/syntax.ts](https://github.com/BankkRoll/repo2pdf/blob/main/src/syntax.ts) | The artist of the project. This script adds a splash of color to the PDF by implementing syntax highlighting and mapping highlight.js classes to specific colors. |
-| 📂/📄 | [src/universalExcludes.ts](https://github.com/BankkRoll/repo2pdf/blob/main/src/universalExcludes.ts) | This script is the bouncer, maintaining a list of file and directory names and extensions that are always excluded from the conversion process. |
-| 📄 | [LICENSE.md](https://github.com/BankkRoll/repo2pdf/blob/main/LICENSE.md) | The rules of the road. This file outlines how others can use and share repo2pdf, ensuring everyone plays fair. |
-| 📄 | [package-lock.json](https://github.com/BankkRoll/repo2pdf/blob/main/package-lock.json) | A snapshot of the exact versions of npm dependencies our project uses. It ensures that the environment is consistent every time you install. |
-| 📄 | [package.json](https://github.com/BankkRoll/repo2pdf/blob/main/package.json) | The ID of our project. It defines the project metadata, scripts, and dependencies and is essential for npm to understand how to handle the project. |
-| 📄 | [README.md](https://github.com/BankkRoll/repo2pdf/blob/main/README.md) | The project's handbook. It provides a comprehensive overview and detailed instructions on how to use repo2pdf. |
-| 📄 | [repo2pdf.ignore](https://github.com/BankkRoll/repo2pdf/blob/main/repo2pdf.ignore) | The project's personal assistant. This file lists files and directories that should be excluded during the conversion, helping to tailor the output to your needs. |
-| 📄 | [tsconfig.json](https://github.com/BankkRoll/repo2pdf/blob/main/tsconfig.json) | The project's blueprint. This file holds the configuration for the TypeScript compiler, directing how the source code is transformed into the final JavaScript code. |
-
-</div>
+| Type | File/Folder                                                        | Description                   |
+| ---- | ------------------------------------------------------------------ | ----------------------------- |
+| 📂   | [src/](./src)                                                      | Source files.                 |
+|      | &nbsp;&nbsp; 📄 [clone.ts](./src/clone.ts)                         | Handles repo cloning.         |
+|      | &nbsp;&nbsp; 📄 [configHandler.ts](./src/configHandler.ts)         | Manages configuration.        |
+|      | &nbsp;&nbsp; 📄 [loadIgnoreConfig.ts](./src/loadIgnoreConfig.ts)   | Loads ignore config.          |
+|      | &nbsp;&nbsp; 📄 [syntax.ts](./src/syntax.ts)                       | Adds syntax highlighting.     |
+|      | &nbsp;&nbsp; 📄 [universalExcludes.ts](./src/universalExcludes.ts) | Manages universal exclusions. |
+| 📄   | [LICENSE.md](./LICENSE.md)                                         | License file.                 |
+| 📄   | [package.json](./package.json)                                     | Project metadata.             |
+| 📄   | [README.md](./README.md)                                           | Project documentation.        |
+| 📄   | [repo2pdf.ignore](./repo2pdf.ignore)                               | Lists files to ignore cloning.|
+| 📄   | [tsconfig.json](./tsconfig.json)                                   | TypeScript config.            |
 
 ---
 
