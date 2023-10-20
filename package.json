@@ -1,6 +1,6 @@
 {
   "name": "repo2pdf",
-  "version": "2.1.6",
+  "version": "2.1.61",
   "description": "A Node.js utility for generating a PDF document from a GitHub repository",
   "main": "dist/clone.js",
   "bin": {
