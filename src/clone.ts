@@ -69,19 +69,21 @@ async function main(
   let tempDir = './tempRepo';
 
   let doc: typeof PDFDocument | null = null;
-  if (!onePdfPerFile) {
-    doc = new PDFDocument({
-      bufferPages: true,
-      autoFirstPage: false,
-    });
-    doc.pipe(fs.createWriteStream(outputFileName));
-  }
+if (!onePdfPerFile) {
+  doc = new PDFDocument({
+    bufferPages: true,
+    autoFirstPage: false,
+  });
+  doc.pipe(fs.createWriteStream(outputFileName));
+  doc.addPage();
+}
 
   let fileCount = 0;
 
   let ignoreConfig: IgnoreConfig | null = null;
 
   const spinner = ora(chalk.blueBright('Setting everything up...')).start();
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   try {
     if (useLocalRepo) {
@@ -130,6 +132,7 @@ async function main(
     );
 
     if (!keepRepo && !useLocalRepo) {
+      await delay(3000);
       fs.rmSync(tempDir, { recursive: true, force: true });
       spinner.succeed(
         chalk.greenBright('Temporary repository has been deleted.'),

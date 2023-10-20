@@ -1,4 +1,4 @@
 {
-    "ignoredFiles": ["tsconfig.json", "dist"],
-    "ignoredExtensions": [".md"]
+    "ignoredFiles": ["tsconfig.json", "dist", "node_modules"],
+    "ignoredExtensions": [".png", ".jpg"]
 }

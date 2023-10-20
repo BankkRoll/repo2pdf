@@ -26,6 +26,7 @@ const universalExcludedExtensions = [
   '.avi',
   '.wmv',
   '.pdf',
+  '.raw'
 ];
 
 export { universalExcludedNames, universalExcludedExtensions };
