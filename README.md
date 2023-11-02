@@ -281,3 +281,10 @@ We're ever grateful for the valuable contributions from our community. Meet the 
 ## License
 
 repo2pdf is open source software, licensed under the MIT License. See the `LICENSE` file for more information.
+
+## Star History
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=BankkRoll/repo2pdf&type=Date&theme=dark">
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=BankkRoll/repo2pdf&type=Date">
+</picture>
