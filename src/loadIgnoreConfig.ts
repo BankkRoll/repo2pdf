@@ -1,5 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 export interface IgnoreConfig {
   ignoredFiles: string[];
@@ -9,14 +9,14 @@ export interface IgnoreConfig {
 export default async function loadIgnoreConfig(
   rootDir: string,
 ): Promise<IgnoreConfig | null> {
-  const ignoreConfigPath = path.join(rootDir, 'repo2pdf.ignore');
+  const ignoreConfigPath = path.join(rootDir, "repo2pdf.ignore");
 
   try {
-    const data = await fs.promises.readFile(ignoreConfigPath, 'utf8');
+    const data = await fs.promises.readFile(ignoreConfigPath, "utf8");
     const config = JSON.parse(data) as IgnoreConfig;
     return config;
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
     } else {
       throw err;

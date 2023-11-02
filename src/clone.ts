@@ -63,7 +63,7 @@ async function main(
   onePdfPerFile: any,
   outputFileName: fs.PathLike,
   outputFolderName: any,
-  keepRepo: any
+  keepRepo: any,
 ) {
   const gitP = git();
   let tempDir = "./tempRepo";
@@ -115,7 +115,7 @@ async function main(
               `Page: ${i + 1} of ${pages.count}`,
               0,
               doc.page.height - oldBottomMargin / 2,
-              { align: "center" }
+              { align: "center" },
             );
             doc.page.margins.bottom = oldBottomMargin;
           }
@@ -128,15 +128,15 @@ async function main(
       chalk.greenBright(
         `${
           onePdfPerFile ? "PDFs" : "PDF"
-        } created with ${fileCount} files processed.`
-      )
+        } created with ${fileCount} files processed.`,
+      ),
     );
 
     if (!keepRepo && !useLocalRepo) {
       await delay(3000);
       fs.rmSync(tempDir, { recursive: true, force: true });
       spinner.succeed(
-        chalk.greenBright("Temporary repository has been deleted.")
+        chalk.greenBright("Temporary repository has been deleted."),
       );
     }
   } catch (err) {
@@ -170,7 +170,7 @@ async function main(
       if (stat.isFile()) {
         fileCount++;
         spinner.text = chalk.blueBright(
-          `Processing files... (${fileCount} processed)`
+          `Processing files... (${fileCount} processed)`,
         );
         let fileName = path.relative(tempDir, filePath);
 
@@ -241,7 +241,7 @@ async function main(
                 language: "plaintext",
               }).value;
             }
-            const hlData = htmlToJson(highlightedCode);
+            const hlData = htmlToJson(highlightedCode, removeEmptyLines);
             let lineNum = 1;
             const lineNumWidth = hlData
               .filter((d) => d.text === "\n")
@@ -255,7 +255,7 @@ async function main(
                     {
                       continued: true,
                       textIndent: 0,
-                    }
+                    },
                   );
                 }
               if (color) doc.fillColor(color);
@@ -279,7 +279,7 @@ async function main(
   if (!onePdfPerFile) {
     doc?.on("finish", () => {
       spinner.succeed(
-        chalk.greenBright(`PDF created with ${fileCount} files processed.`)
+        chalk.greenBright(`PDF created with ${fileCount} files processed.`),
       );
     });
   }

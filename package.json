@@ -1,7 +1,7 @@
 {
   "name": "repo2pdf",
-  "version": "2.1.61",
-  "description": "A Node.js utility for generating a PDF document from a GitHub repository",
+  "version": "2.2.0",
+  "description": "A CLI tool for generating a PDF document from a GitHub repository",
   "main": "dist/clone.js",
   "bin": {
     "repo2pdf": "dist/clone.js"
@@ -10,6 +10,7 @@
     "start": "node dist/clone.js",
     "watch": "tsc -w",
     "build": "tsc",
+    "prepublishOnly": "npm run format && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write ."
   },

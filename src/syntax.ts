@@ -1,125 +1,76 @@
-import { decode } from 'html-entities';
+import { decode } from "html-entities";
 
-/**
- * @param {string} htmlCode
- */
 export function htmlToJson(
   htmlCode: string,
+  removeEmptyLines: boolean,
 ): { text: string; color?: string }[] {
-  /**
-   * @type {{text: string, color?: string}[]}
-   */
   const data: { text: string; color?: string }[] = [];
-  const elementRegex =
-    /^<span\s+class="hljs-([^"]+)"[^>]*>([^<]*)(?:<\/span>)?/;
-  const nonelementRegex = /[^<]*/;
+  const colorMap: { [type: string]: string } = {
+    comment: "#708090", // SlateGray
+    punctuation: "#2F4F4F", // DarkSlateGray
+    tag: "#008080", // Teal
+    attribute: "#2E8B57", // SeaGreen
+    doctag: "#2E8B57", // SeaGreen
+    keyword: "#000080", // Navy
+    meta: "#4682B4", // SteelBlue
+    name: "#556B2F", // DarkOliveGreen
+    "selector-tag": "#008B8B", // DarkCyan
+    deletion: "#8B0000", // DarkRed
+    number: "#FF4500", // OrangeRed
+    quote: "#6A5ACD", // SlateBlue
+    "selector-class": "#483D8B", // DarkSlateBlue
+    "selector-id": "#9400D3", // DarkViolet
+    string: "#006400", // DarkGreen
+    "template-tag": "#778899", // LightSlateGray
+    type: "#696969", // DimGray
+    section: "#20B2AA", // LightSeaGreen
+    title: "#9370DB", // MediumPurple
+    link: "#8A2BE2", // BlueViolet
+    operator: "#A52A2A", // Brown
+    regexp: "#B22222", // FireBrick
+    "selector-attr": "#5F9EA0", // CadetBlue
+    "selector-pseudo": "#7FFF00", // Chartreuse
+    symbol: "#DC143C", // Crimson
+    "template-variable": "#8B008B", // DarkMagenta
+    variable: "#FFD700", // Gold
+    literal: "#32CD32", // LimeGreen
+    addition: "#228B22", // ForestGreen
+    built_in: "#ADFF2F", // GreenYellow
+    bullet: "#7CFC00", // LawnGreen
+    code: "#7F8C8D", // Gray
+  };
 
-  while (htmlCode) {
-    const match = htmlCode.match(elementRegex);
-    if (match) {
-      const fullText = match[0];
-      const cls = match[1];
-      const text = match[2];
-      let color = 'black';
-      const type = cls.split(' ')[0].toLowerCase() ?? 'unknown';
-      switch (type) {
-        case 'comment':
-          color = '#697070';
-          break;
-        case 'punctuation':
-        case 'tag':
-          color = '#444a';
-          break;
-        case 'attribute':
-        case 'doctag':
-        case 'keyword':
-        case 'meta':
-        case 'keyword':
-        case 'name':
-        case 'selector-tag':
-          color = '#32a2cb';
-          break;
-        case 'deletion':
-        case 'number':
-        case 'quote':
-        case 'selector-class':
-        case 'selector-id':
-        case 'string':
-        case 'template-tag':
-        case 'type':
-        case 'section':
-        case 'title':
-          color = '#800';
-          break;
-        case 'link':
-        case 'operator':
-        case 'regexp':
-        case 'selector-attr':
-        case 'selector-pseudo':
-        case 'symbol':
-        case 'template-variable':
-        case 'variable':
-          color = '#ab5656';
-          break;
-        case 'literal':
-          color = '#695';
-          break;
-        case 'addition':
-        case 'built_in':
-        case 'bullet':
-        case 'code':
-          color = '#397300';
-          break;
-        case 'meta':
-          color = '#1f7199';
-          break;
-        case 'string':
-          color = '#38a';
-          break;
-      }
-      data.push({ text: decode(text), color });
-      htmlCode = htmlCode.slice(fullText.length);
-    } else if (htmlCode.startsWith('</span>')) {
-      // Failed ending from hljs
-      const text = '</span>';
-      htmlCode = htmlCode.slice(text.length);
-    } else if (htmlCode.startsWith('\n')) {
-      const text = '\n';
-      htmlCode = htmlCode.slice(1);
-      data.push({ text });
-    } else {
-      const match = htmlCode.match(nonelementRegex);
-      const text = match![0];
-      htmlCode = htmlCode.slice(text.length);
-      data.push({ text: decode(text) });
-    }
+  const elementRegex =
+    /<span\s+class="hljs-([^"]+)"[^>]*>([^<]*)(?:<\/span>)?/g;
+  const nonelementRegex = /[^<]+|<\/span>|\n/g;
+
+  let match;
+  while ((match = elementRegex.exec(htmlCode)) !== null) {
+    const [fullText, cls, text] = match;
+    const color = colorMap[cls.split(" ")[0].toLowerCase()] || "black";
+    data.push({ text: decode(text), color });
   }
 
-  /**
-   * @type {{text: string, color?: string}[]}
-   */
+  htmlCode = htmlCode.replace(elementRegex, "");
+
+  while ((match = nonelementRegex.exec(htmlCode)) !== null) {
+    const text = match[0];
+    data.push({ text: text === "\n" ? text : decode(text) });
+  }
+
   const fixedData: { text: string; color?: string }[] = [];
-  // Fix newlines and empty lines if user wants to
   for (let i = 0; i < data.length; i++) {
     const { text, color } = data[i];
-    const lines = text.split('\n');
+    const lines = text.split("\n");
     for (let j = 0; j < lines.length; j++) {
       const line = lines[j];
 
-      if (
-        line.trim() === '' &&
-        j > 0 &&
-        lines[j - 1] === '' &&
-        j < lines.length - 1 &&
-        lines[j + 1] === ''
-      ) {
+      // Conditionally skip lines that only contain whitespace
+      if (removeEmptyLines && line.trim() === "") {
         continue;
       }
 
-      if (j > 0 && fixedData[fixedData.length - 1]?.text !== '\n') {
-        fixedData.push({ text: '\n' });
-      }
-
+      if (j > 0) fixedData.push({ text: "\n" });
       fixedData.push({ text: line, color });
     }
   }
