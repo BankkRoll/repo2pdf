@@ -1,3 +1,7 @@
+# remove untrtacked files
+# // git ls-files -z -c -i --exclude-standard | xargs -0 git rm --cached
+
+
 # Dependency directories
 node_modules/
 
