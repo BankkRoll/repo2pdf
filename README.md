@@ -12,15 +12,22 @@
 
 repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
 
-- [Example PDF](#example-pdf)
-- [Installation and Usage](#installation-and-usage)
-  - [Installing with NPX](#installing-and-using-repo2pdf-with-npx)
-  - [Installing by Cloning the Repository](#installing-and-using-repo2pdf-by-cloning-the-repository)
-- [Configuration](#configuration)
-- [Troubleshooting / FAQ](#troubleshooting--faq)
-- [Contributing to repo2pdf](#contributing-to-repo2pdf)
-- [Project Structure](#project-structure)
-- [License](#license)
+- [repo2pdf](#repo2pdf)
+  - [Example PDF](#example-pdf)
+  - [Installation and Usage](#installation-and-usage)
+    - [Installing and Using repo2pdf with NPX](#installing-and-using-repo2pdf-with-npx)
+    - [Installing and Using repo2pdf by Cloning the Repository](#installing-and-using-repo2pdf-by-cloning-the-repository)
+  - [Configuration](#configuration)
+    - [Example of file structure](#example-of-file-structure)
+  - [Troubleshooting / FAQ](#troubleshooting--faq)
+  - [Contributing to repo2pdf](#contributing-to-repo2pdf)
+    - [Reporting Bugs](#reporting-bugs)
+    - [Suggesting Enhancements](#suggesting-enhancements)
+    - [Writing Code](#writing-code)
+    - [Meet Our Contributors](#meet-our-contributors)
+  - [Project Structure](#project-structure)
+  - [License](#license)
+  - [Star History](#star-history)
 
 ---
 
@@ -79,6 +86,17 @@ npx repo2pdf
 ### Installing and Using repo2pdf by Cloning the Repository
 
 This method involves manually cloning the repo2pdf repository and setting it up on your local machine.
+0. Dependencies:
+   01. node > 18 `node -v`
+   ```sh
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+    source ~/.bashrc
+    nvm install 18
+    nvm use 18
+    node -v
+   ```
+
+  
 
 1. Clone the repository:
 
