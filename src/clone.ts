@@ -25,6 +25,25 @@ import type inquirerType from "inquirer";
 //@ts-ignore
 import type oraType from "ora";
 
+
+import prettier from "prettier";
+
+function getPrettierParser(extension: string): string | null {
+  const parserOptions: { [key: string]: string } = {
+    "js": "babel",
+    "jsx": "babel",
+    "ts": "typescript",
+    "tsx": "typescript",
+    "css": "css",
+    "html": "html",
+    "json": "json",
+    "md": "markdown",
+    "yaml": "yaml",
+    // Add other supported extensions and their parsers here
+  };
+  return parserOptions[extension] || null;
+}
+
 let chalk: typeof chalkType;
 let inquirer: typeof inquirerType;
 let ora: typeof oraType;
@@ -201,6 +220,20 @@ async function main(
               .text(`${fileName}\n\nBASE64:\n\n${data}`, { lineGap: 4 });
           } else {
             let data = await fsPromises.readFile(filePath, "utf8");
+            // Determine parser and format with Prettier if supported
+            const extension = path.extname(filePath).slice(1); // remove the dot
+            const parser = getPrettierParser(extension);
+            if (parser) {
+              try {
+                data = await  prettier.format(data, { parser });
+              } catch (error: unknown) {
+                // Force TypeScript to treat error as an instance of Error
+              console.error("Prettier formatting failed:", (error as Error).message);
+            }
+            }
+
+            data = data.replace(/\t/g, "    "); // Replace tabs with spaces
+            data = data.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
             data = data.replace(/Ð/g, "\n");
             data = data.replace(/\r\n/g, "\n");
             data = data.replace(/\r/g, "\n");
@@ -221,7 +254,7 @@ async function main(
               data = data.replace(/^\s*[\r\n]/gm, "");
             }
 
-            const extension = path.extname(filePath).replace(".", "");
+            // const extension = path.extname(filePath).replace(".", "");
             let highlightedCode;
             try {
               // Check if language is supported before attempting to highlight
