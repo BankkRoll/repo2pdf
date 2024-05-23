@@ -10,20 +10,7 @@ let inquirer: typeof inquirerType;
 
 type QuestionType = {
   type?: string;
-  name: [
-    "localRepo",
-    "localRepoPath",
-    "repoUrl",
-    "addLineNumbers",
-    "addHighlighting",
-    "addPageNumbers",
-    "removeComments",
-    "removeEmptyLines",
-    "onePdfPerFile",
-    "outputFileName",
-    "outputFolderName",
-    "keepRepo",
-  ][number];
+  name: string;
   message: string;
   validate?: (value: string) => boolean | string;
   filter?: (value: string) => boolean | string | string[];
@@ -50,7 +37,7 @@ export async function configQuestions(
     {
       name: "localRepoPath",
       message: "Please provide the full path to the local repository:",
-      when(answers: { localRepo: any }) {
+      when(answers: { localRepo: boolean }) {
         return answers.localRepo;
       },
       validate: function (value: string) {
@@ -64,7 +51,7 @@ export async function configQuestions(
     {
       name: "repoUrl",
       message: "Please provide a GitHub repository URL:",
-      when(answers: { localRepo: any }) {
+      when(answers: { localRepo: boolean }) {
         return !answers.localRepo;
       },
       validate: function (value: string) {
@@ -78,77 +65,32 @@ export async function configQuestions(
       },
     },
     {
-      type: "list",
-      name: "addLineNumbers",
-      message: "Do you want to add line numbers to the PDF?",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes";
-      },
-    },
-    {
-      type: "list",
-      name: "addHighlighting",
-      message: "Do you want to add highlighting to the PDF?",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes";
-      },
-    },
-    {
-      type: "list",
-      name: "removeComments",
-      message:
-        "Do you want to remove comments from the PDF? (Does not remove comments behind code on the same line)",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes";
-      },
-    },
-    {
-      type: "list",
-      name: "removeEmptyLines",
-      message: "Do you want to remove empty lines from the PDF?",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes";
-      },
-    },
-    {
-      type: "list",
-      name: "onePdfPerFile",
-      message: "Do you want to make one PDF per file?",
-      choices: ["No", "Yes"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes";
-      },
-    },
-    {
-      type: "list",
-      name: "addPageNumbers",
-      message: "Do you want to add page numbers to the PDF?",
-      choices: ["Yes", "No"],
-      filter: function (val: string) {
-        return val.toLowerCase() === "yes";
-      },
-      when(answers: { onePdfPerFile: any }) {
-        return !answers.onePdfPerFile;
-      },
+      type: "checkbox",
+      name: "features",
+      message: "Select the features you want to include:",
+      choices: [
+        "Add line numbers",
+        "Add highlighting",
+        "Add page numbers",
+        "Remove comments",
+        "Remove empty lines",
+        "One PDF per file",
+      ],
     },
     {
       name: "outputFileName",
       message: "Please provide an output file name:",
       default: "output.pdf",
-      when(answers: { onePdfPerFile: any }) {
-        return !answers.onePdfPerFile;
+      when(answers: { features: string[] }) {
+        return !answers.features.includes("One PDF per file");
       },
     },
     {
       name: "outputFolderName",
       message: "Please provide an output folder name:",
       default: "./output",
-      when(answers: { onePdfPerFile: any }) {
-        return answers.onePdfPerFile;
+      when(answers: { features: string[] }) {
+        return answers.features.includes("One PDF per file");
       },
     },
     {
@@ -156,7 +98,7 @@ export async function configQuestions(
       name: "keepRepo",
       message: "Do you want to keep the cloned repository?",
       choices: ["No", "Yes"],
-      when(answers: { localRepo: any }) {
+      when(answers: { localRepo: boolean }) {
         return !answers.localRepo;
       },
       filter: function (val: string) {
@@ -167,7 +109,6 @@ export async function configQuestions(
 
   console.log(
     chalk.cyanBright(`
-
   ██████╗ ███████╗██████╗  ██████╗         ██████╗         ██████╗ ██████╗ ███████╗
   ██╔══██╗██╔════╝██╔══██╗██╔═══██╗        ╚════██╗        ██╔══██╗██╔══██╗██╔════╝
   ██████╔╝█████╗  ██████╔╝██║   ██║         █████╔╝        ██████╔╝██║  ██║█████╗
@@ -181,17 +122,28 @@ export async function configQuestions(
 
   const answers = await inquirer.prompt(questions);
   console.log(chalk.cyanBright("\nProcessing your request...\n"));
+
+  const {
+    localRepo,
+    localRepoPath,
+    repoUrl,
+    features,
+    outputFileName,
+    outputFolderName,
+    keepRepo,
+  } = answers;
+
   main(
-    answers.localRepo ? answers.localRepoPath : answers.repoUrl,
-    answers.localRepo,
-    answers.addLineNumbers,
-    answers.addHighlighting,
-    answers.addPageNumbers,
-    answers.removeComments,
-    answers.removeEmptyLines,
-    answers.onePdfPerFile,
-    answers.outputFileName,
-    answers.outputFolderName,
-    answers.keepRepo,
+    localRepo ? localRepoPath : repoUrl,
+    localRepo,
+    features.includes("Add line numbers"),
+    features.includes("Add highlighting"),
+    features.includes("Add page numbers"),
+    features.includes("Remove comments"),
+    features.includes("Remove empty lines"),
+    features.includes("One PDF per file"),
+    outputFileName,
+    outputFolderName,
+    keepRepo,
   );
 }

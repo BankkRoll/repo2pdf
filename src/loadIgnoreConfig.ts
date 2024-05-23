@@ -15,11 +15,10 @@ export default async function loadIgnoreConfig(
     const data = await fs.promises.readFile(ignoreConfigPath, "utf8");
     const config = JSON.parse(data) as IgnoreConfig;
     return config;
-  } catch (err: unknown) {
+  } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
-    } else {
-      throw err;
     }
+    throw err;
   }
 }

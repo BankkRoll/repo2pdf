@@ -5,9 +5,10 @@ import path from "path";
 
 import git from "simple-git";
 import PDFDocument from "pdfkit";
-import { default as hljs } from "highlight.js";
+import hljs from "highlight.js";
 import { isBinaryFileSync } from "isbinaryfile";
 import strip from "strip-comments";
+import prettier from "prettier";
 
 import { htmlToJson } from "./syntax";
 import loadIgnoreConfig, { IgnoreConfig } from "./loadIgnoreConfig";
@@ -15,7 +16,6 @@ import {
   universalExcludedExtensions,
   universalExcludedNames,
 } from "./universalExcludes";
-
 import { configQuestions } from "./configHandler";
 
 //@ts-ignore
@@ -25,21 +25,33 @@ import type inquirerType from "inquirer";
 //@ts-ignore
 import type oraType from "ora";
 
-
-import prettier from "prettier";
-
 function getPrettierParser(extension: string): string | null {
   const parserOptions: { [key: string]: string } = {
-    "js": "babel",
-    "jsx": "babel",
-    "ts": "typescript",
-    "tsx": "typescript",
-    "css": "css",
-    "html": "html",
-    "json": "json",
-    "md": "markdown",
-    "yaml": "yaml",
-    // Add other supported extensions and their parsers here
+    js: "babel",
+    jsx: "babel",
+    ts: "typescript",
+    tsx: "typescript",
+    css: "css",
+    scss: "scss",
+    less: "less",
+    html: "html",
+    json: "json",
+    md: "markdown",
+    yaml: "yaml",
+    graphql: "graphql",
+    vue: "vue",
+    angular: "angular",
+    xml: "xml",
+    java: "java",
+    kotlin: "kotlin",
+    swift: "swift",
+    php: "php",
+    ruby: "ruby",
+    python: "python",
+    perl: "perl",
+    shell: "sh",
+    dockerfile: "dockerfile",
+    ini: "ini",
   };
   return parserOptions[extension] || null;
 }
@@ -74,15 +86,15 @@ Promise.all([
 async function main(
   repoPath: string,
   useLocalRepo: boolean,
-  addLineNumbers: any,
-  addHighlighting: any,
-  addPageNumbers: any,
-  removeComments: any,
+  addLineNumbers: boolean,
+  addHighlighting: boolean,
+  addPageNumbers: boolean,
+  removeComments: boolean,
   removeEmptyLines: boolean,
-  onePdfPerFile: any,
+  onePdfPerFile: boolean,
   outputFileName: fs.PathLike,
-  outputFolderName: any,
-  keepRepo: any,
+  outputFolderName: string,
+  keepRepo: boolean,
 ) {
   const gitP = git();
   let tempDir = "./tempRepo";
@@ -98,9 +110,7 @@ async function main(
   }
 
   let fileCount = 0;
-
   let ignoreConfig: IgnoreConfig | null = null;
-
   const spinner = ora(chalk.blueBright("Setting everything up...")).start();
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
@@ -110,36 +120,34 @@ async function main(
       tempDir = repoPath;
     } else {
       spinner.start(chalk.blueBright("Cloning repository..."));
-
       await gitP.clone(repoPath, tempDir);
       spinner.succeed(chalk.greenBright("Repository cloned successfully"));
     }
 
     spinner.start(chalk.blueBright("Processing files..."));
-
     ignoreConfig = await loadIgnoreConfig(tempDir);
-
     await appendFilesToPdf(tempDir, removeComments);
 
     if (!onePdfPerFile) {
       if (doc) {
-        let pages = doc.bufferedPageRange();
+        const pages = doc.bufferedPageRange();
         for (let i = 0; i < pages.count; i++) {
           doc.switchToPage(i);
-
           if (addPageNumbers) {
-            let oldBottomMargin = doc.page.margins.bottom;
+            const oldBottomMargin = doc.page.margins.bottom;
             doc.page.margins.bottom = 0;
             doc.text(
               `Page: ${i + 1} of ${pages.count}`,
               0,
               doc.page.height - oldBottomMargin / 2,
-              { align: "center" },
+              {
+                align: "center",
+              },
             );
             doc.page.margins.bottom = oldBottomMargin;
           }
         }
-        doc?.end();
+        doc.end();
       }
     }
 
@@ -166,7 +174,7 @@ async function main(
   async function appendFilesToPdf(directory: string, removeComments = false) {
     const files = await fsPromises.readdir(directory);
 
-    for (let file of files) {
+    for (const file of files) {
       const filePath = path.join(directory, file);
       const stat = await fsPromises.stat(filePath);
 
@@ -191,7 +199,7 @@ async function main(
         spinner.text = chalk.blueBright(
           `Processing files... (${fileCount} processed)`,
         );
-        let fileName = path.relative(tempDir, filePath);
+        const fileName = path.relative(tempDir, filePath);
 
         if (onePdfPerFile) {
           doc = new PDFDocument({
@@ -221,59 +229,48 @@ async function main(
           } else {
             let data = await fsPromises.readFile(filePath, "utf8");
             // Determine parser and format with Prettier if supported
-            const extension = path.extname(filePath).slice(1); // remove the dot
+            const extension = path.extname(filePath).slice(1);
             const parser = getPrettierParser(extension);
+
             if (parser) {
               try {
-                data = await  prettier.format(data, { parser });
+                data = await prettier.format(data, { parser });
               } catch (error: unknown) {
-                // Force TypeScript to treat error as an instance of Error
-              console.error("Prettier formatting failed:", (error as Error).message);
-            }
+                const errorMessage = (error as Error).message.split("\n")[0];
+                console.warn(
+                  `Plain text fallback at ${filePath}: ${errorMessage}`,
+                );
+              }
             }
 
-            data = data.replace(/\t/g, "    "); // Replace tabs with spaces
+            data = data.replace(/\t/g, "    ");
             data = data.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-            data = data.replace(/Ð/g, "\n");
-            data = data.replace(/\r\n/g, "\n");
-            data = data.replace(/\r/g, "\n");
-            data = data.replace(/uþs/g, "");
-
-            doc.addPage();
-            doc
-              .font("Courier")
-              .fontSize(10)
-              .text(`${fileName}\n\n`, { lineGap: 4 });
 
             if (removeComments) {
               data = strip(data);
             }
 
-            // Remove empty whitespace lines
             if (removeEmptyLines) {
               data = data.replace(/^\s*[\r\n]/gm, "");
             }
 
-            // const extension = path.extname(filePath).replace(".", "");
             let highlightedCode;
             try {
-              // Check if language is supported before attempting to highlight
               if (addHighlighting && hljs.getLanguage(extension)) {
                 highlightedCode = hljs.highlight(data, {
                   language: extension,
                 }).value;
               } else {
-                // Use plaintext highlighting if language is not supported
                 highlightedCode = hljs.highlight(data, {
                   language: "plaintext",
                 }).value;
               }
             } catch (error) {
-              // Use plaintext highlighting if an error occurs
               highlightedCode = hljs.highlight(data, {
                 language: "plaintext",
               }).value;
             }
+
             const hlData = htmlToJson(highlightedCode, removeEmptyLines);
             let lineNum = 1;
             const lineNumWidth = hlData
@@ -281,7 +278,7 @@ async function main(
               .length.toString().length;
             for (let i = 0; i < hlData.length; i++) {
               const { text, color } = hlData[i];
-              if (i == 0 || hlData[i - 1]?.text === "\n")
+              if (i === 0 || hlData[i - 1]?.text === "\n")
                 if (addLineNumbers) {
                   doc.text(
                     String(lineNum++).padStart(lineNumWidth, " ") + " ",
@@ -291,8 +288,7 @@ async function main(
                     },
                   );
                 }
-              if (color) doc.fillColor(color);
-              else doc.fillColor("black");
+              doc.fillColor(color || "black");
 
               if (text !== "\n") doc.text(text, { continued: true });
               else doc.text(text);
