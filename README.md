@@ -13,7 +13,6 @@
 repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
 
 - [repo2pdf](#repo2pdf)
-  - [Example PDF](#example-pdf)
   - [Installation and Usage](#installation-and-usage)
     - [Installing and Using repo2pdf with NPX](#installing-and-using-repo2pdf-with-npx)
     - [Installing and Using repo2pdf by Cloning the Repository](#installing-and-using-repo2pdf-by-cloning-the-repository)
@@ -28,35 +27,6 @@ repo2pdf is an innovative and versatile tool designed to seamlessly transform Gi
   - [Project Structure](#project-structure)
   - [License](#license)
   - [Star History](#star-history)
-
----
-
-## Example PDF
-
-<table>
-  <tr>
-    <td valign="top" width="40%">
-      <p align="center">
-        We have transformed the <a href="https://github.com/freeCodeCamp/freeCodeCamp">FreeCodeCamp</a> repository from 42,998 files into a 186,453-page PDF in under 2 minutes. This conversion is purely for example and stress testing purposes. All content belongs to the original authors at FreeCodeCamp.
-      </p>
-      <p align="center">
-        <a href="https://github.com/freeCodeCamp/freeCodeCamp">
-          <img alt="GitHub logo" src="https://img.shields.io/badge/-freeCodeCamp-181717?style=for-the-badge&logo=github" />
-        </a>
-      </p>
-      <p align="center">
-        <a href="https://freecodecamppdf.bankkroll.repl.co">
-          <img alt="View PDF" src="https://img.shields.io/badge/-View%20PDF-blue?style=for-the-badge" />
-        </a>
-      </p>
-    </td>
-    <td width="60%">
-      <p align="center">
-        <img src="https://github.com/BankkRoll/repo2pdf/assets/106103625/9ceb176f-37f6-40d9-ab95-080942d2d7c0" width="100%">
-      </p>
-    </td>
-  </tr>
-</table>
 
 ---
 
@@ -76,7 +46,7 @@ This method downloads and installs the latest version of repo2pdf from the NPM r
 npx repo2pdf
 ```
 
-2. The script will start running. Follow the prompt and provide the necessary information:
+2. The script will start running. Follow the prompt and provide the necessary information.
    - GitHub repository URL
    - Output file name
    - Decision on whether to keep the cloned repository (Y/N)
@@ -86,17 +56,6 @@ npx repo2pdf
 ### Installing and Using repo2pdf by Cloning the Repository
 
 This method involves manually cloning the repo2pdf repository and setting it up on your local machine.
-0. Dependencies:
-   01. node > 18 `node -v`
-   ```sh
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
-    source ~/.bashrc
-    nvm install 18
-    nvm use 18
-    node -v
-   ```
-
-  
 
 1. Clone the repository:
 
@@ -132,18 +91,17 @@ npm start
    - Decision on whether to clone a repository or use a local repository
      - If using a local repository, provide the path
      - If cloning a repository, provide the URL
-   - Decision on whether to include line numbers in the PDF
-   - Decision on whether to include highlighting in the PDF
-   - Decision on whether to remove comments from the code
-   - Decision on whether to remove empty lines from the code
-   - Decision on whether to have one large file or one PDF per file in your repo
-     - If choosing one large file, you have two additional options:
-       - Whether to add page numbers
-       - Whether to add a table of contents (this feature is coming in the future)
+   - Features checklist for
+     - add line numbers in the PDF
+     - add page numbers in the PDF
+     - add highlighting in the PDF
+     - remove comments from the code
+     - remove empty lines from the code
+     - one file or one PDF per file
    - Name of the output PDF file or output directory
    - Decision on whether to keep the cloned repository after generating the PDF
 
-Please note that you need to have Node.js installed on your system in order to run repo2pdf.
+Please note that you need to have Node > 18 and git(for non-local repos) installed on your system in order to run repo2pdf.
 
 ---
 
@@ -152,14 +110,14 @@ Please note that you need to have Node.js installed on your system in order to r
 repo2pdf automatically ignores certain file types and directories (e.g., `.png`, `.git`).
 To customize the files and directories to ignore, you can add a `repo2pdf.ignore` file to the root of your repository.
 
-Please note that if you use a local repository, the `repo2pdf.ignore` file must be in the root of the repository directory. And you might need to add more directories to the ignore list, as the script not automatically ignores different build files and directories.
+Please note that if you use a local repository, the `repo2pdf.ignore` file must be in the root of the repository directory. And you might need to add more directories to the ignore list, as the script does not automatically ignores different build files and directories.
 
 ### Example of file structure
 
 ```json
 {
-  "ignoredFiles": ["tsconfig.json"],
-  "ignoredExtensions": [".md"]
+  "ignoredFiles": ["tsconfig.json", "dist", "node_modules"],
+  "ignoredExtensions": [".raw"]
 }
 ```
 
@@ -275,24 +233,6 @@ Feel free to contribute to the project by implementing any of these ideas or sug
 We're ever grateful for the valuable contributions from our community. Meet the people who're helping shape repo2pdf:
 
 [![Contributors](https://contrib.rocks/image?repo=BankkRoll/repo2pdf)](https://github.com/BankkRoll/repo2pdf/graphs/contributors)
-
----
-
-## Project Structure
-
-| Type | File/Folder                                                        | Description                   |
-| ---- | ------------------------------------------------------------------ | ----------------------------- |
-| 📂   | [src/](./src)                                                      | Source files.                 |
-|      | &nbsp;&nbsp; 📄 [clone.ts](./src/clone.ts)                         | Handles repo cloning.         |
-|      | &nbsp;&nbsp; 📄 [configHandler.ts](./src/configHandler.ts)         | Manages configuration.        |
-|      | &nbsp;&nbsp; 📄 [loadIgnoreConfig.ts](./src/loadIgnoreConfig.ts)   | Loads ignore config.          |
-|      | &nbsp;&nbsp; 📄 [syntax.ts](./src/syntax.ts)                       | Adds syntax highlighting.     |
-|      | &nbsp;&nbsp; 📄 [universalExcludes.ts](./src/universalExcludes.ts) | Manages universal exclusions. |
-| 📄   | [LICENSE.md](./LICENSE.md)                                         | License file.                 |
-| 📄   | [package.json](./package.json)                                     | Project metadata.             |
-| 📄   | [README.md](./README.md)                                           | Project documentation.        |
-| 📄   | [repo2pdf.ignore](./repo2pdf.ignore)                               | Lists files to ignore cloning.|
-| 📄   | [tsconfig.json](./tsconfig.json)                                   | TypeScript config.            |
 
 ---
 
