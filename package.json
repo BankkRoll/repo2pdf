@@ -1,6 +1,6 @@
 {
   "name": "repo2pdf",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "A CLI tool for generating a PDF document from a GitHub repository",
   "main": "dist/clone.js",
   "bin": {
@@ -61,6 +61,7 @@
     "isbinaryfile": "^5.0.0",
     "ora": "^6.3.1",
     "pdfkit": "^0.13.0",
+    "prettier": "^3.0.3",
     "simple-git": "^3.18.0",
     "strip-comments": "^2.0.1"
   },
@@ -71,7 +72,6 @@
     "@types/inquirer": "^9.0.3",
     "@types/pdfkit": "^0.12.10",
     "@types/strip-comments": "^2.0.1",
-    "prettier": "^3.0.3",
     "typescript": "^5.1.3"
   }
 }
