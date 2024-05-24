@@ -23,7 +23,7 @@ export const Hero = () => {
   };
 
   return (
-    <section className="container grid lg:grid-cols-2 justify-start place-items-center py-10 md:py-32 gap-10">
+    <section className="max-w-7xl px-2 grid lg:grid-cols-2 justify-start place-items-center py-10 md:py-32 gap-10">
       <div className="lg:text-start space-y-6">
         <motion.div
           initial="hidden"
@@ -38,15 +38,6 @@ export const Hero = () => {
             },
           }}
         >
-          <motion.div
-            className="md:hidden block"
-            initial="initial"
-            animate="animate"
-            variants={pullupVariant}
-            custom={1}
-          >
-            <img src="/repo2pdf.png" alt="hero" className="h-36" />
-          </motion.div>
           <motion.h1
             className="font-display text-5xl md:text-8xl font-bold tracking-[-0.02em] drop-shadow-sm md:leading-[5rem]"
             variants={FADE_UP_ANIMATION_VARIANTS}

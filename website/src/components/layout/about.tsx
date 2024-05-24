@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import NumberTicker from "../ui/ticker";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { Repo2Pdf } from "../ui/beams/git-pdf-beam";
+import NumberTicker from "../ui/ticker";
 
 export const About = () => {
   const repo2pdfurl = "https://github.com/BankkRoll/repo2pdf";
@@ -110,6 +111,9 @@ export const About = () => {
         <div className="px-6 flex flex-col-reverse md:flex-row gap-8 md:gap-12">
           <div className="bg-green-0 flex flex-col justify-between w-full">
             <div className="pb-6">
+              <div className="w-full flex items-center justify-center mx-auto p-4 md:p-10 max-w-2xl">
+                <Repo2Pdf />
+              </div>
               <h2 className="text-3xl md:text-4xl font-bold">
                 <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
                   About{" "}

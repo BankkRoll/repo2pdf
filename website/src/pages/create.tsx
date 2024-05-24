@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { convertToPDF } from "../utils/pdf-converter";
 import { useRouter } from "next/router";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AnimatedBeamer } from "@/components/ui/beams/animated-beamer";
 
 export default function Create() {
   const [repoUrl, setRepoUrl] = useState<string>("");
@@ -158,12 +159,16 @@ export default function Create() {
       </div>
 
       <div className="flex flex-col w-full md:w-2/3 p-4 items-center">
-        {!pdfUrl || isLoading ? (
+        {!pdfUrl ? (
           <iframe
             src={"/repo2pdf-web.pdf"}
             title="PDF Preview"
             className="min-h-[400px] md:min-h-[80svh] w-full h-full border rounded-lg"
           />
+        ) : isLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <AnimatedBeamer />
+          </div>
         ) : (
           <iframe
             src={pdfUrl}
