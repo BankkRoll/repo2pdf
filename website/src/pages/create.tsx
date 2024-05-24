@@ -146,7 +146,10 @@ export default function Create() {
             >
               Clone and Convert
             </Button>
-            <Button variant="secondary">
+            <Button
+              variant="secondary"
+              className="hover:bg-secondary cursor-default hover:cursor-default"
+            >
               {username ? `${username}` : "Loading..."}
               <GitHubLogoIcon className="ml-2 w-5 h-5" />
             </Button>

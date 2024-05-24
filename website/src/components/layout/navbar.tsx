@@ -8,10 +8,12 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { FaNpm } from "react-icons/fa6";
 
 import {
   DropdownMenuIcon,
@@ -85,30 +87,48 @@ export const Navbar = () => {
                       href={href}
                       onClick={() => setIsOpen(false)}
                       passHref
+                      className="w-full"
                     >
                       <SheetClose asChild>
-                        <Button variant="ghost">{label}</Button>
+                        <Button variant="ghost" className="w-full">
+                          {label}
+                        </Button>
                       </SheetClose>
                     </Link>
                   ))}
+                </nav>
+                <SheetFooter className="absolute bottom-6 left-0 right-0 gap-2 mx-4">
                   <a
                     rel="noreferrer noopener"
                     href="https://github.com/BankkRoll/repo2pdf"
                     target="_blank"
+                    className="w-full"
                   >
-                    <Button variant="ghost">
+                    <Button variant="outline" className="w-full">
                       <GitHubLogoIcon className="mr-2 w-5 h-5" />
                       Github
                     </Button>
                   </a>
-                </nav>
+
+                  <a
+                    rel="noreferrer noopener"
+                    href="https://www.npmjs.com/package/repo2pdf"
+                    target="_blank"
+                    className="w-full"
+                  >
+                    <Button variant="outline" className="w-full">
+                      <FaNpm className="mr-2 w-5 h-5" />
+                      NPM
+                    </Button>
+                  </a>
+                </SheetFooter>
               </SheetContent>
             </Sheet>
           </span>
 
           <div className="hidden md:flex gap-2">
             <Link href="/create" passHref>
-              <Button variant="outline" className="font-bold mr-6">
+              <Button variant="link" className="font-bold mr-6">
                 Create
               </Button>
             </Link>
@@ -120,6 +140,16 @@ export const Navbar = () => {
             >
               <Button variant="outline" size="icon">
                 <GitHubLogoIcon className="w-5 h-5" />
+              </Button>
+            </a>
+
+            <a
+              rel="noreferrer noopener"
+              href="https://www.npmjs.com/package/repo2pdf"
+              target="_blank"
+            >
+              <Button variant="outline" size="icon">
+                <FaNpm className="w-5 h-5" />
               </Button>
             </a>
 
