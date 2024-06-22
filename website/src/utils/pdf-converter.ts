@@ -1,3 +1,4 @@
+// src/utils/pdf-converter.ts
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 import { marked } from "marked";
@@ -87,9 +88,12 @@ function splitTextIntoLines(
 
 export async function convertToPDF(
   repoFiles: { name: string; content: string }[],
+  addLineNumbers: boolean,
+  addPageNumbers: boolean,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  let pageNumber = 1;
 
   for (const { name, content } of repoFiles) {
     if (shouldExclude(name)) {
@@ -118,12 +122,26 @@ export async function convertToPDF(
     const lines = safeContent.split("\n");
     for (const line of lines) {
       const splitLines = splitTextIntoLines(line, width - 2 * margin, fontSize);
-      for (const splitLine of splitLines) {
+      for (let index = 0; index < splitLines.length; index++) {
+        const splitLine = splitLines[index];
         if (yPosition <= margin) {
+          if (addPageNumbers) {
+            page.drawText(`Page ${pageNumber}`, {
+              x: width / 2 - margin,
+              y: margin / 2,
+              size: fontSize,
+              font,
+              color: rgb(0, 0, 0),
+            });
+            pageNumber++;
+          }
           page = pdfDoc.addPage();
           yPosition = height - margin - fontSize;
         }
-        page.drawText(splitLine, {
+        const textToDraw = addLineNumbers
+          ? `${index + 1}: ${splitLine}`
+          : splitLine;
+        page.drawText(textToDraw, {
           x: margin,
           y: yPosition,
           size: fontSize,
@@ -132,6 +150,17 @@ export async function convertToPDF(
         });
         yPosition -= lineHeight;
       }
+    }
+
+    if (addPageNumbers) {
+      page.drawText(`Page ${pageNumber}`, {
+        x: width / 2 - margin,
+        y: margin / 2,
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      pageNumber++;
     }
   }
 

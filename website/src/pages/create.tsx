@@ -1,4 +1,11 @@
 // src/pages/create.tsx
+
+import {
+  CheckboxState,
+  ItemState,
+  Tree,
+  updateItemStates,
+} from "@/components/create/file-tree";
 import {
   Dialog,
   DialogContent,
@@ -6,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AnimatedBeamer } from "@/components/ui/beams/animated-beamer";
 import { Button } from "@/components/ui/button";
@@ -18,16 +25,26 @@ import { convertToPDF } from "@/utils/pdf-converter";
 import { toast } from "sonner";
 import { useRouter } from "next/router";
 
-export default function Create() {
+interface RepoFile {
+  id: number;
+  name: string;
+  parentId: number;
+  path: string;
+  content: string;
+}
+
+const Create: React.FC = () => {
   const [repoUrl, setRepoUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [repoFiles, setRepoFiles] = useState<any[]>([]);
+  const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [addLineNumbers, setAddLineNumbers] = useState<boolean>(false);
+  const [addPageNumbers, setAddPageNumbers] = useState<boolean>(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -67,37 +84,27 @@ export default function Create() {
     }
 
     setIsLoading(true);
-    toast.promise(
-      fetch("/api/clone-repo", {
+    try {
+      const response = await fetch("/api/clone-repo", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({ repoUrl }),
-      })
-        .then(async (response) => {
-          const { repoFiles, error } = await response.json();
-          if (error) {
-            throw new Error(error);
-          }
-          setRepoFiles(repoFiles);
-          setSelectedFiles(
-            new Set(repoFiles.map((file: { path: any }) => file.path)),
-          ); // Default to select all
-          setSelectAll(true);
-          setDialogOpen(true);
-          return { repoUrl };
-        })
-        .finally(() => {
-          setIsLoading(false);
-        }),
-      {
-        loading: "Fetching repository files...",
-        success: ({ repoUrl }) => `Successfully fetched files from ${repoUrl}`,
-        error: "Error fetching repository files",
-      },
-    );
+      });
+      const { repoFiles, error } = await response.json();
+      if (error) {
+        throw new Error(error);
+      }
+      setRepoFiles(repoFiles);
+      setSelectedFiles(new Set(repoFiles.map((file: RepoFile) => file.path)));
+      setDialogOpen(true);
+    } catch (error) {
+      toast.error("Error fetching repository files");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleConvertToPDF = async () => {
@@ -105,14 +112,18 @@ export default function Create() {
     const selectedRepoFiles = repoFiles.filter((file) =>
       selectedFiles.has(file.path),
     );
-    const pdfBytes = await convertToPDF(selectedRepoFiles);
+    const pdfBytes = await convertToPDF(
+      selectedRepoFiles,
+      addLineNumbers,
+      addPageNumbers,
+    );
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const pdfUrl = URL.createObjectURL(blob);
     setPdfUrl(pdfUrl);
     setIsLoading(false);
   };
 
-  const handleFileSelection = (filePath: string) => {
+  const handleFileSelection = useCallback((filePath: string) => {
     setSelectedFiles((prevSelectedFiles) => {
       const newSelectedFiles = new Set(prevSelectedFiles);
       if (newSelectedFiles.has(filePath)) {
@@ -122,7 +133,28 @@ export default function Create() {
       }
       return newSelectedFiles;
     });
-  };
+  }, []);
+
+  const [itemStates, setItemStates] = useState<ItemState[]>(
+    repoFiles.map((file) => ({ id: file.id, state: CheckboxState.UNCHECKED })),
+  );
+
+  const getStateForId = useCallback(
+    (id: number) => {
+      return (
+        itemStates.find((i) => i.id === id)?.state ?? CheckboxState.UNCHECKED
+      );
+    },
+    [itemStates],
+  );
+
+  const clickHandler = useCallback(
+    (id: number) => {
+      setItemStates(updateItemStates(itemStates, repoFiles, id));
+      handleFileSelection(id.toString());
+    },
+    [itemStates, repoFiles, handleFileSelection],
+  );
 
   const handleSelectAll = () => {
     if (selectAll) {
@@ -144,102 +176,110 @@ export default function Create() {
     }
   };
 
+  const handleLogout = () => {
+    setToken(null);
+    setUsername(null);
+    setRepoFiles([]);
+    setSelectedFiles(new Set());
+    setSelectAll(false);
+    setDialogOpen(false);
+    toast.success("Logged out successfully");
+  };
+
   return (
     <main className="flex flex-col md:flex-row justify-between p-4">
       <div className="flex flex-col w-full md:w-1/3 p-4">
         <h1 className="text-4xl font-bold mb-6">Create</h1>
-        <Input
-          placeholder="Enter GitHub Repo URL"
-          value={repoUrl}
-          onChange={(e) => setRepoUrl(e.target.value)}
-          className="mb-4"
-        />
-        <div className="flex flex-col pb-6 gap-4">
-          <div className="flex items-center gap-2">
-            <Checkbox disabled id="lineNumbers" />
-            <label
-              htmlFor="lineNumbers"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Add Line Numbers
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox disabled id="pageNumbers" />
-            <label
-              htmlFor="pageNumbers"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Add Page Numbers
-            </label>
-          </div>
-        </div>
         {!token ? (
           <div className="flex flex-col">
-            <Button variant="secondary" onClick={handleCloneRepo}>
+            <Button variant="secondary" onClick={handleSignInWithGitHub}>
               Connect
               <GitHubLogoIcon className="ml-2 w-5 h-5" />
             </Button>
             <p className="text-sm text-center text-muted-foreground italic">
-              Your github token is NEVER STORED and used only in auth callback
+              Your GitHub token is NEVER STORED and used only in auth callback
               to clone and convert the repository.
             </p>
           </div>
         ) : (
-          <div className="flex flex-col">
-            <Button
-              onClick={handleCloneRepo}
-              disabled={!repoUrl || isLoading}
+          <>
+            <Input
+              placeholder="Enter GitHub Repo URL"
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
               className="mb-4"
-            >
-              Fetch Files
-            </Button>
-            <Button
-              variant="secondary"
-              className="hover:bg-secondary cursor-default hover:cursor-default"
-            >
-              {username ? `${username}` : "Loading..."}
-              <GitHubLogoIcon className="ml-2 w-5 h-5" />
-            </Button>
-          </div>
+            />
+            <div className="flex flex-col pb-6 gap-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="lineNumbers"
+                  checked={addLineNumbers}
+                  onCheckedChange={() => setAddLineNumbers(!addLineNumbers)}
+                />
+                <label
+                  htmlFor="lineNumbers"
+                  className="text-sm font-medium leading-none"
+                >
+                  Add Line Numbers
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="pageNumbers"
+                  checked={addPageNumbers}
+                  onCheckedChange={() => setAddPageNumbers(!addPageNumbers)}
+                />
+                <label
+                  htmlFor="pageNumbers"
+                  className="text-sm font-medium leading-none"
+                >
+                  Add Page Numbers
+                </label>
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <Button
+                onClick={handleCloneRepo}
+                disabled={!repoUrl || isLoading}
+                className="mb-4"
+              >
+                Fetch Files
+              </Button>
+              <Button
+                variant="secondary"
+                className="hover:bg-secondary cursor-default"
+              >
+                {username ? `${username}` : "Loading..."}
+                <GitHubLogoIcon className="ml-2 w-5 h-5" />
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleLogout}
+                className="mt-2"
+              >
+                Logout
+              </Button>
+            </div>
+          </>
         )}
         {repoFiles.length > 0 && (
           <>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger>
-                <Button className="w-full my-4">
-                  Select Files ({selectedFiles.size})
-                </Button>
+              <DialogTrigger asChild>
+                <div className="w-full my-4">
+                  <Button>Select Files ({selectedFiles.size})</Button>
+                </div>
               </DialogTrigger>
               <DialogContent>
                 <ScrollArea className="max-h-[60svh]">
                   <DialogHeader>
                     <DialogTitle>Select Files</DialogTitle>
                   </DialogHeader>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="selectAll"
-                        checked={selectAll}
-                        onCheckedChange={handleSelectAll}
-                      />
-                      <label htmlFor="selectAll" className="text-sm">
-                        Select All
-                      </label>
-                    </div>
-                    {repoFiles.map((file) => (
-                      <div key={file.path} className="flex items-center gap-2">
-                        <Checkbox
-                          id={file.path}
-                          checked={selectedFiles.has(file.path)}
-                          onCheckedChange={() => handleFileSelection(file.path)}
-                        />
-                        <label htmlFor={file.path} className="text-sm">
-                          {file.path}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
+                  <Tree
+                    data={repoFiles}
+                    getStateForId={getStateForId}
+                    onClick={clickHandler}
+                  />
                 </ScrollArea>
               </DialogContent>
             </Dialog>
@@ -271,4 +311,6 @@ export default function Create() {
       </div>
     </main>
   );
-}
+};
+
+export default Create;

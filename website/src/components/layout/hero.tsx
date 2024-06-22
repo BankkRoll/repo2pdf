@@ -10,8 +10,11 @@ import { Input } from "../ui/input";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 export const Hero = () => {
+  const { theme } = useTheme();
+
   const FADE_UP_ANIMATION_VARIANTS = {
     hidden: { opacity: 0, y: 10 },
     show: { opacity: 1, y: 0, transition: { type: "spring" } },
@@ -134,7 +137,11 @@ export const Hero = () => {
         variants={pullupVariant}
         custom={1}
       >
-        <img src="/repo2pdf.png" alt="hero" className="h-[30rem]" />
+        <img
+          src={theme === "dark" ? "/repo2pdf.png" : "/repo2pdf-dark.png"}
+          alt="hero"
+          className="h-[30rem]"
+        />
       </motion.div>
     </section>
   );

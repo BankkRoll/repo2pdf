@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { Repo2Pdf } from "../ui/beams/git-pdf-beam";
+
 import NumberTicker from "../ui/ticker";
+import { Repo2Pdf } from "../ui/beams/git-pdf-beam";
+import { motion } from "framer-motion";
 
 export const About = () => {
   const repo2pdfurl = "https://github.com/BankkRoll/repo2pdf";
@@ -122,7 +123,7 @@ export const About = () => {
                   repo2pdf
                 </span>
               </h2>
-              <p className="text-xl text-muted-foreground mt-4">
+              <p className="text-md md:text-xl text-muted-foreground mt-4">
                 repo2pdf is an innovative and versatile tool designed to
                 seamlessly transform GitHub repositories into well-formatted,
                 visually engaging, and easy-to-navigate PDF files. Starting as a
