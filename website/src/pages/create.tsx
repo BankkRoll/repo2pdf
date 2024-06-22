@@ -165,7 +165,7 @@ const Create: React.FC = () => {
     <main className="flex flex-col md:flex-row justify-between p-4">
       <div className="relative flex flex-col w-full md:w-1/3 p-4">
         <h1 className="text-4xl font-bold mb-6">Create</h1>
-        {token ? (
+        {!token ? (
           <div className="flex flex-col">
             <Button variant="secondary" onClick={handleSignInWithGitHub}>
               Connect
