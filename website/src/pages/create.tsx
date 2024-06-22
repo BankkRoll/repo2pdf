@@ -1,18 +1,12 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+// src/pages/create.tsx
+import { SetStateAction, useEffect, useState } from "react";
 
-import { AnimatedBeamer } from "@/components/ui/beams/animated-beamer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import FileSelectionDialog from "@/components/create/file-selector";
+import GitHubAuth from "@/components/create/github-auth";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import PDFPreview from "@/components/create/pdf-preview";
 import { convertToPDF } from "@/utils/pdf-converter";
 import { toast } from "sonner";
 import { useRouter } from "next/router";
@@ -83,8 +77,7 @@ export default function Create() {
           setRepoFiles(repoFiles);
           setSelectedFiles(
             new Set(repoFiles.map((file: { path: any }) => file.path)),
-          ); // Default to select all
-          setSelectAll(true);
+          );
           setDialogOpen(true);
           return { repoUrl };
         })
@@ -143,6 +136,16 @@ export default function Create() {
     }
   };
 
+  const handleLogout = () => {
+    setToken(null);
+    setUsername(null);
+    setRepoFiles([]);
+    setSelectedFiles(new Set());
+    setSelectAll(false);
+    setDialogOpen(false);
+    toast.success("Logged out successfully");
+  };
+
   return (
     <main className="flex flex-col md:flex-row justify-between p-4">
       <div className="flex flex-col w-full md:w-1/3 p-4">
@@ -150,124 +153,36 @@ export default function Create() {
         <Input
           placeholder="Enter GitHub Repo URL"
           value={repoUrl}
-          onChange={(e) => setRepoUrl(e.target.value)}
+          onChange={(e: { target: { value: SetStateAction<string> } }) =>
+            setRepoUrl(e.target.value)
+          }
           className="mb-4"
         />
-        <div className="flex flex-col pb-6 gap-4">
-          <div className="flex items-center gap-2">
-            <Checkbox disabled id="lineNumbers" />
-            <label
-              htmlFor="lineNumbers"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Add Line Numbers
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox disabled id="pageNumbers" />
-            <label
-              htmlFor="pageNumbers"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Add Page Numbers
-            </label>
-          </div>
-        </div>
-        {!token ? (
-          <div className="flex flex-col">
-            <Button variant="secondary" onClick={handleSignInWithGitHub}>
-              Connect
-              <GitHubLogoIcon className="ml-2 w-5 h-5" />
-            </Button>
-            <p className="text-sm text-center text-muted-foreground italic">
-              Your github token is NEVER STORED and used only in auth callback
-              to clone and convert the repository.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            <Button
-              onClick={handleCloneRepo}
-              disabled={!repoUrl || isLoading}
-              className="mb-4"
-            >
-              Fetch Files
-            </Button>
-            <Button
-              variant="secondary"
-              className="hover:bg-secondary cursor-default hover:cursor-default"
-            >
-              {username ? `${username}` : "Loading..."}
-              <GitHubLogoIcon className="ml-2 w-5 h-5" />
-            </Button>
-          </div>
-        )}
+        <GitHubAuth
+          token={token}
+          username={username}
+          onSignIn={handleSignInWithGitHub}
+          onCloneRepo={handleCloneRepo}
+          onLogout={handleLogout}
+          isLoading={isLoading}
+          repoUrl={repoUrl}
+        />
         {repoFiles.length > 0 && (
           <>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger>
-                <Button className="w-full my-4">
-                  Select Files ({selectedFiles.size})
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <ScrollArea className="max-h-[60svh]">
-                  <DialogHeader>
-                    <DialogTitle>Select Files</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="selectAll"
-                        checked={selectAll}
-                        onCheckedChange={handleSelectAll}
-                      />
-                      <label htmlFor="selectAll" className="text-sm">
-                        Select All
-                      </label>
-                    </div>
-                    {repoFiles.map((file) => (
-                      <div key={file.path} className="flex items-center gap-2">
-                        <Checkbox
-                          id={file.path}
-                          checked={selectedFiles.has(file.path)}
-                          onCheckedChange={() => handleFileSelection(file.path)}
-                        />
-                        <label htmlFor={file.path} className="text-sm">
-                          {file.path}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
+            <FileSelectionDialog
+              dialogOpen={dialogOpen}
+              setDialogOpen={setDialogOpen}
+              repoFiles={repoFiles}
+              selectedFiles={selectedFiles}
+              handleFileSelection={handleFileSelection}
+            />
             <Button onClick={handleConvertToPDF} disabled={isLoading}>
               Convert ({selectedFiles.size}) Files to PDF
             </Button>
           </>
         )}
       </div>
-
-      <div className="flex flex-col w-full md:w-2/3 p-4 items-center">
-        {!pdfUrl ? (
-          <iframe
-            src={"/repo2pdf-web.pdf"}
-            title="PDF Preview"
-            className="min-h-[400px] md:min-h-[80svh] w-full h-full border rounded-lg"
-          />
-        ) : isLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <AnimatedBeamer />
-          </div>
-        ) : (
-          <iframe
-            src={pdfUrl}
-            title="PDF Preview"
-            className="min-h-[400px] md:min-h-[80svh] w-full h-full border rounded-lg"
-          />
-        )}
-      </div>
+      <PDFPreview pdfUrl={pdfUrl} isLoading={isLoading} />
     </main>
   );
 }
