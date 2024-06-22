@@ -6,12 +6,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ExitIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
 import { useCallback, useEffect, useState } from "react";
 
 import { AnimatedBeamer } from "@/components/ui/beams/animated-beamer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { convertToPDF } from "@/utils/pdf-converter";
@@ -157,14 +157,15 @@ const Create: React.FC = () => {
     setSelectedFiles(new Set());
     setSelectAll(false);
     setDialogOpen(false);
+    router.reload();
     toast.success("Logged out successfully");
   };
 
   return (
     <main className="flex flex-col md:flex-row justify-between p-4">
-      <div className="flex flex-col w-full md:w-1/3 p-4">
+      <div className="relative flex flex-col w-full md:w-1/3 p-4">
         <h1 className="text-4xl font-bold mb-6">Create</h1>
-        {!token ? (
+        {token ? (
           <div className="flex flex-col">
             <Button variant="secondary" onClick={handleSignInWithGitHub}>
               Connect
@@ -183,47 +184,21 @@ const Create: React.FC = () => {
               onChange={(e) => setRepoUrl(e.target.value)}
               className="mb-4"
             />
-            <div className="flex flex-col pb-6 gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="lineNumbers"
-                  checked={addLineNumbers}
-                  onCheckedChange={() => setAddLineNumbers(!addLineNumbers)}
-                />
-                <label
-                  htmlFor="lineNumbers"
-                  className="text-sm font-medium leading-none"
-                >
-                  Add Line Numbers
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="pageNumbers"
-                  checked={addPageNumbers}
-                  onCheckedChange={() => setAddPageNumbers(!addPageNumbers)}
-                />
-                <label
-                  htmlFor="pageNumbers"
-                  className="text-sm font-medium leading-none"
-                >
-                  Add Page Numbers
-                </label>
-              </div>
-            </div>
-            {repoFiles.length > 0 && (
+            {repoFiles.length > 0 ? (
               <>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
-                    <div className="w-full my-4">
-                      <Button>Select Files ({selectedFiles.size})</Button>
+                    <div className="w-full">
+                      <Button className="w-full mb-2">
+                        Select Files ({selectedFiles.size})
+                      </Button>
                     </div>
                   </DialogTrigger>
                   <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Select Files</DialogTitle>
+                    </DialogHeader>
                     <ScrollArea className="max-h-[60svh]">
-                      <DialogHeader>
-                        <DialogTitle>Select Files</DialogTitle>
-                      </DialogHeader>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <Checkbox
@@ -256,28 +231,69 @@ const Create: React.FC = () => {
                     </ScrollArea>
                   </DialogContent>
                 </Dialog>
-                <Button onClick={handleConvertToPDF} disabled={isLoading}>
+                <div className="flex flex-col pt-4 pb-6 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="lineNumbers"
+                      checked={addLineNumbers}
+                      onCheckedChange={() => setAddLineNumbers(!addLineNumbers)}
+                    />
+                    <label
+                      htmlFor="lineNumbers"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Add Line Numbers ᴮᴱᵀᴬ
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="pageNumbers"
+                      checked={addPageNumbers}
+                      onCheckedChange={() => setAddPageNumbers(!addPageNumbers)}
+                    />
+                    <label
+                      htmlFor="pageNumbers"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Add Page Numbers ᴮᴱᵀᴬ
+                    </label>
+                  </div>
+                </div>
+                <Button
+                  className="w-full mb-2"
+                  onClick={handleConvertToPDF}
+                  disabled={isLoading}
+                >
                   Convert ({selectedFiles.size}) Files to PDF
                 </Button>
               </>
+            ) : (
+              <Button
+                onClick={handleCloneRepo}
+                disabled={!repoUrl || isLoading}
+                className="mb-4"
+              >
+                Fetch Files
+              </Button>
             )}
-            <Button
-              onClick={handleCloneRepo}
-              disabled={!repoUrl || isLoading}
-              className="mb-4"
-            >
-              Fetch Files
-            </Button>
-            <Button
-              variant="secondary"
-              className="hover:bg-secondary cursor-default"
-            >
-              {username ? `${username}` : "Loading..."}
-              <GitHubLogoIcon className="ml-2 w-5 h-5" />
-            </Button>
-            <Button variant="secondary" onClick={handleLogout} className="mt-2">
-              Logout
-            </Button>
+            <div className="flex-grow"></div>
+            <div className="flex flex-row gap-2 items-center">
+              <Button
+                variant="outline"
+                className="hover:bg-transparent cursor-default flex items-center justify-center w-full"
+              >
+                {username ? `${username}` : "Loading..."}
+                <GitHubLogoIcon className="ml-2 w-5 h-5" />
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleLogout}
+                className="flex items-center justify-center w-full"
+              >
+                Logout
+                <ExitIcon className="ml-2 w-5 h-5" />
+              </Button>
+            </div>
           </>
         )}
       </div>
