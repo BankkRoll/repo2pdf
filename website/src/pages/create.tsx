@@ -1,11 +1,4 @@
 // src/pages/create.tsx
-
-import {
-  CheckboxState,
-  ItemState,
-  Tree,
-  updateItemStates,
-} from "@/components/create/file-tree";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { convertToPDF } from "@/utils/pdf-converter";
 import { toast } from "sonner";
 import { useRouter } from "next/router";
+import { useTheme } from "next-themes";
 
 interface RepoFile {
   id: number;
@@ -46,6 +40,7 @@ const Create: React.FC = () => {
   const [addLineNumbers, setAddLineNumbers] = useState<boolean>(false);
   const [addPageNumbers, setAddPageNumbers] = useState<boolean>(false);
   const router = useRouter();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const { token } = router.query;
@@ -135,27 +130,6 @@ const Create: React.FC = () => {
     });
   }, []);
 
-  const [itemStates, setItemStates] = useState<ItemState[]>(
-    repoFiles.map((file) => ({ id: file.id, state: CheckboxState.UNCHECKED })),
-  );
-
-  const getStateForId = useCallback(
-    (id: number) => {
-      return (
-        itemStates.find((i) => i.id === id)?.state ?? CheckboxState.UNCHECKED
-      );
-    },
-    [itemStates],
-  );
-
-  const clickHandler = useCallback(
-    (id: number) => {
-      setItemStates(updateItemStates(itemStates, repoFiles, id));
-      handleFileSelection(id.toString());
-    },
-    [itemStates, repoFiles, handleFileSelection],
-  );
-
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedFiles(new Set());
@@ -237,54 +211,72 @@ const Create: React.FC = () => {
                 </label>
               </div>
             </div>
-            <div className="flex flex-col">
-              <Button
-                onClick={handleCloneRepo}
-                disabled={!repoUrl || isLoading}
-                className="mb-4"
-              >
-                Fetch Files
-              </Button>
-              <Button
-                variant="secondary"
-                className="hover:bg-secondary cursor-default"
-              >
-                {username ? `${username}` : "Loading..."}
-                <GitHubLogoIcon className="ml-2 w-5 h-5" />
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={handleLogout}
-                className="mt-2"
-              >
-                Logout
-              </Button>
-            </div>
-          </>
-        )}
-        {repoFiles.length > 0 && (
-          <>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <div className="w-full my-4">
-                  <Button>Select Files ({selectedFiles.size})</Button>
-                </div>
-              </DialogTrigger>
-              <DialogContent>
-                <ScrollArea className="max-h-[60svh]">
-                  <DialogHeader>
-                    <DialogTitle>Select Files</DialogTitle>
-                  </DialogHeader>
-                  <Tree
-                    data={repoFiles}
-                    getStateForId={getStateForId}
-                    onClick={clickHandler}
-                  />
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
-            <Button onClick={handleConvertToPDF} disabled={isLoading}>
-              Convert ({selectedFiles.size}) Files to PDF
+            {repoFiles.length > 0 && (
+              <>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <div className="w-full my-4">
+                      <Button>Select Files ({selectedFiles.size})</Button>
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <ScrollArea className="max-h-[60svh]">
+                      <DialogHeader>
+                        <DialogTitle>Select Files</DialogTitle>
+                      </DialogHeader>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="selectAll"
+                            checked={selectAll}
+                            onCheckedChange={handleSelectAll}
+                          />
+                          <label htmlFor="selectAll" className="text-sm">
+                            Select All
+                          </label>
+                        </div>
+                        {repoFiles.map((file) => (
+                          <div
+                            key={file.path}
+                            className="flex items-center gap-2"
+                          >
+                            <Checkbox
+                              id={file.path}
+                              checked={selectedFiles.has(file.path)}
+                              onCheckedChange={() =>
+                                handleFileSelection(file.path)
+                              }
+                            />
+                            <label htmlFor={file.path} className="text-sm">
+                              {file.path}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+                <Button onClick={handleConvertToPDF} disabled={isLoading}>
+                  Convert ({selectedFiles.size}) Files to PDF
+                </Button>
+              </>
+            )}
+            <Button
+              onClick={handleCloneRepo}
+              disabled={!repoUrl || isLoading}
+              className="mb-4"
+            >
+              Fetch Files
+            </Button>
+            <Button
+              variant="secondary"
+              className="hover:bg-secondary cursor-default"
+            >
+              {username ? `${username}` : "Loading..."}
+              <GitHubLogoIcon className="ml-2 w-5 h-5" />
+            </Button>
+            <Button variant="secondary" onClick={handleLogout} className="mt-2">
+              Logout
             </Button>
           </>
         )}
