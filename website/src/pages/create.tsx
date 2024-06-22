@@ -1,12 +1,21 @@
-import { useState, useEffect } from "react";
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
-import { convertToPDF } from "../utils/pdf-converter";
-import { useRouter } from "next/router";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
-import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+
 import { AnimatedBeamer } from "@/components/ui/beams/animated-beamer";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { convertToPDF } from "@/utils/pdf-converter";
+import { toast } from "sonner";
+import { useRouter } from "next/router";
 
 export default function Create() {
   const [repoUrl, setRepoUrl] = useState<string>("");
@@ -14,6 +23,10 @@ export default function Create() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [repoFiles, setRepoFiles] = useState<any[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState<boolean>(false);
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -67,23 +80,56 @@ export default function Create() {
           if (error) {
             throw new Error(error);
           }
-
-          const pdfBytes = await convertToPDF(repoFiles);
-          const blob = new Blob([pdfBytes], { type: "application/pdf" });
-          const pdfUrl = URL.createObjectURL(blob);
-          setPdfUrl(pdfUrl);
+          setRepoFiles(repoFiles);
+          setSelectedFiles(
+            new Set(repoFiles.map((file: { path: any }) => file.path)),
+          ); // Default to select all
+          setSelectAll(true);
+          setDialogOpen(true);
           return { repoUrl };
         })
         .finally(() => {
           setIsLoading(false);
         }),
       {
-        loading: "Cloning repository...",
-        success: ({ repoUrl }) =>
-          `Successfully cloned and converted ${repoUrl} to PDF`,
-        error: "Error cloning repository",
+        loading: "Fetching repository files...",
+        success: ({ repoUrl }) => `Successfully fetched files from ${repoUrl}`,
+        error: "Error fetching repository files",
       },
     );
+  };
+
+  const handleConvertToPDF = async () => {
+    setIsLoading(true);
+    const selectedRepoFiles = repoFiles.filter((file) =>
+      selectedFiles.has(file.path),
+    );
+    const pdfBytes = await convertToPDF(selectedRepoFiles);
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const pdfUrl = URL.createObjectURL(blob);
+    setPdfUrl(pdfUrl);
+    setIsLoading(false);
+  };
+
+  const handleFileSelection = (filePath: string) => {
+    setSelectedFiles((prevSelectedFiles) => {
+      const newSelectedFiles = new Set(prevSelectedFiles);
+      if (newSelectedFiles.has(filePath)) {
+        newSelectedFiles.delete(filePath);
+      } else {
+        newSelectedFiles.add(filePath);
+      }
+      return newSelectedFiles;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedFiles(new Set());
+    } else {
+      setSelectedFiles(new Set(repoFiles.map((file) => file.path)));
+    }
+    setSelectAll(!selectAll);
   };
 
   const handleSignInWithGitHub = async () => {
@@ -145,7 +191,7 @@ export default function Create() {
               disabled={!repoUrl || isLoading}
               className="mb-4"
             >
-              Clone and Convert
+              Fetch Files
             </Button>
             <Button
               variant="secondary"
@@ -155,6 +201,51 @@ export default function Create() {
               <GitHubLogoIcon className="ml-2 w-5 h-5" />
             </Button>
           </div>
+        )}
+        {repoFiles.length > 0 && (
+          <>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger>
+                <Button className="w-full my-4">
+                  Select Files ({selectedFiles.size})
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <ScrollArea className="max-h-[60svh]">
+                  <DialogHeader>
+                    <DialogTitle>Select Files</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="selectAll"
+                        checked={selectAll}
+                        onCheckedChange={handleSelectAll}
+                      />
+                      <label htmlFor="selectAll" className="text-sm">
+                        Select All
+                      </label>
+                    </div>
+                    {repoFiles.map((file) => (
+                      <div key={file.path} className="flex items-center gap-2">
+                        <Checkbox
+                          id={file.path}
+                          checked={selectedFiles.has(file.path)}
+                          onCheckedChange={() => handleFileSelection(file.path)}
+                        />
+                        <label htmlFor={file.path} className="text-sm">
+                          {file.path}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleConvertToPDF} disabled={isLoading}>
+              Convert ({selectedFiles.size}) Files to PDF
+            </Button>
+          </>
         )}
       </div>
 

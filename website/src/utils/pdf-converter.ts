@@ -1,6 +1,5 @@
-import { PDFDocument, rgb } from "pdf-lib";
-import hljs from "highlight.js";
-import "highlight.js/styles/github.css";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+
 import { marked } from "marked";
 
 const universalExcludedNames = [
@@ -37,16 +36,11 @@ async function formatContent(
   content: string,
   fileName: string,
 ): Promise<string> {
-  const extension = fileName.split(".").pop();
+  const extension = fileName.split(".").pop() || "txt";
   if (extension === "md" || extension === "markdown") {
     return marked(content);
   } else {
-    try {
-      return `<pre>${hljs.highlightAuto(content).value}</pre>`;
-    } catch (e) {
-      console.error(`Highlight.js error for ${fileName}:`, e);
-      return `<pre>${content}</pre>`;
-    }
+    return content;
   }
 }
 
@@ -95,6 +89,7 @@ export async function convertToPDF(
   repoFiles: { name: string; content: string }[],
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
   for (const { name, content } of repoFiles) {
     if (shouldExclude(name)) {
@@ -114,6 +109,7 @@ export async function convertToPDF(
       x: margin,
       y: yPosition,
       size: fontSize,
+      font,
       color: rgb(0, 0, 0),
     });
 
@@ -131,6 +127,7 @@ export async function convertToPDF(
           x: margin,
           y: yPosition,
           size: fontSize,
+          font,
           color: rgb(0, 0, 0),
         });
         yPosition -= lineHeight;

@@ -1,8 +1,13 @@
 // pages/api/clone-repo.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
-async function fetchRepoContents(owner: string, repo: string, token?: string) {
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents`;
+async function fetchRepoContents(
+  owner: string,
+  repo: string,
+  path = "",
+  token?: string,
+) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents${path ? `/${path}` : ""}`;
   const headers: HeadersInit = {};
 
   if (token) {
@@ -13,7 +18,18 @@ async function fetchRepoContents(owner: string, repo: string, token?: string) {
   if (!response.ok) {
     throw new Error("Failed to fetch repository contents");
   }
-  return await response.json();
+  const contents = await response.json();
+
+  const files: any[] = [];
+  for (const item of contents) {
+    if (item.type === "file") {
+      files.push(item);
+    } else if (item.type === "dir") {
+      const subFiles = await fetchRepoContents(owner, repo, item.path, token);
+      files.push(...subFiles);
+    }
+  }
+  return files;
 }
 
 async function fetchFileContent(url: string, token?: string) {
@@ -40,32 +56,16 @@ export default async function handler(
   const [owner, repo] = repoUrl.replace("https://github.com/", "").split("/");
 
   try {
-    let repoContents;
-    try {
-      repoContents = await fetchRepoContents(owner, repo, token);
-    } catch (error) {
-      if (!token) {
-        return res.status(401).json({
-          error:
-            "Unauthorized. Please sign in to GitHub for higher rate limits.",
-        });
-      }
-      return res
-        .status(500)
-        .json({ error: "Failed to fetch repository contents" });
-    }
+    const repoContents = await fetchRepoContents(owner, repo, "", token);
 
     const repoFiles = await Promise.all(
-      repoContents.map(async (file: any) => {
-        if (file.type === "file") {
-          const content = await fetchFileContent(file.download_url, token);
-          return { name: file.name, content };
-        }
-        return null;
+      repoContents.map(async (file) => {
+        const content = await fetchFileContent(file.download_url, token);
+        return { name: file.name, path: file.path, content };
       }),
     );
 
-    res.status(200).json({ repoFiles: repoFiles.filter(Boolean) });
+    res.status(200).json({ repoFiles });
   } catch (error) {
     console.error("Error fetching repository contents:", error);
     res.status(500).json({ error: "Failed to fetch repository contents" });

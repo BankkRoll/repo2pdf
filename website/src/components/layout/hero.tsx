@@ -1,9 +1,15 @@
 "use client";
 
+import * as React from "react";
+
 import { ArrowRightIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
+
 import { Button } from "../ui/button";
+import { CopyNpmCommandButton } from "../ui/copy-command";
+import { Input } from "../ui/input";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export const Hero = () => {
   const FADE_UP_ANIMATION_VARIANTS = {
@@ -13,13 +19,29 @@ export const Hero = () => {
 
   const pullupVariant = {
     initial: { y: 100, opacity: 0 },
-    animate: (i: any) => ({
+    animate: (i: number) => ({
       y: 0,
       opacity: 1,
       transition: {
         delay: i * 0.05,
       },
     }),
+  };
+
+  const commands = {
+    __npmCommand__: "npm install repo2pdf",
+    __pnpmCommand__: "pnpm add repo2pdf",
+    __bunCommand__: "bun add repo2pdf",
+    __yarnCommand__: "yarn add repo2pdf",
+  };
+
+  const [selectedCommand, setSelectedCommand] = React.useState(
+    commands.__npmCommand__,
+  );
+
+  const handleSelectCommand = (command: string) => {
+    setSelectedCommand(command);
+    toast.success(`Copied ${command}`);
   };
 
   return (
@@ -47,13 +69,35 @@ export const Hero = () => {
             </span>
           </motion.h1>
           <motion.p
-            className="mt-6 text-xl text-muted-foreground md:w-10/12 mx-auto lg:mx-0"
+            className="my-6 text-xl text-muted-foreground md:w-10/12 mx-auto lg:mx-0"
             variants={FADE_UP_ANIMATION_VARIANTS}
           >
             Turn your GitHub repository into a PDF with just a few clicks.
             Whether you need it for your business, AI, or any other purpose you
             can use repo2pdf.
           </motion.p>
+          <motion.div
+            className="block"
+            initial="initial"
+            animate="animate"
+            variants={pullupVariant}
+            custom={1}
+          >
+            <div className="relative w-[94%] md:w-[60%]">
+              <Input
+                type="text"
+                value={selectedCommand}
+                readOnly
+                className="w-full pr-20"
+              />
+              <div className="absolute right-0 top-0 flex items-center h-full">
+                <CopyNpmCommandButton
+                  commands={commands}
+                  onSelectCommand={handleSelectCommand}
+                />
+              </div>
+            </div>
+          </motion.div>
           <motion.div
             className="mt-6 flex flex-row gap-4"
             variants={FADE_UP_ANIMATION_VARIANTS}
@@ -92,8 +136,6 @@ export const Hero = () => {
       >
         <img src="/repo2pdf.png" alt="hero" className="h-[30rem]" />
       </motion.div>
-
-      <div className="hero-gradient"></div>
     </section>
   );
 };
