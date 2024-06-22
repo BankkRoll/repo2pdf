@@ -13,7 +13,13 @@ import { toast } from "sonner";
 import { useTheme } from "next-themes";
 
 export const Hero = () => {
-  const { theme } = useTheme();
+  const { theme, resolvedTheme } = useTheme();
+  const currentTheme = theme === "system" ? resolvedTheme : theme;
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const FADE_UP_ANIMATION_VARIANTS = {
     hidden: { opacity: 0, y: 10 },
@@ -137,11 +143,15 @@ export const Hero = () => {
         variants={pullupVariant}
         custom={1}
       >
-        <img
-          src={theme === "dark" ? "/repo2pdf.png" : "/repo2pdf-dark.png"}
-          alt="hero"
-          className="h-[30rem]"
-        />
+        {isMounted && (
+          <img
+            src={
+              currentTheme === "dark" ? "/repo2pdf.png" : "/repo2pdf-dark.png"
+            }
+            alt="hero"
+            className="h-[30rem]"
+          />
+        )}
       </motion.div>
     </section>
   );

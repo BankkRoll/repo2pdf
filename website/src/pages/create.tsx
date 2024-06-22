@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { convertToPDF } from "@/utils/pdf-converter";
 import { toast } from "sonner";
+import { track } from "@vercel/analytics";
 import { useRouter } from "next/router";
 import { useTheme } from "next-themes";
 
@@ -167,7 +168,13 @@ const Create: React.FC = () => {
         <h1 className="text-4xl font-bold mb-6">Create</h1>
         {!token ? (
           <div className="flex flex-col">
-            <Button variant="secondary" onClick={handleSignInWithGitHub}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                track("SignInWithGitHub");
+                handleSignInWithGitHub();
+              }}
+            >
               Connect
               <GitHubLogoIcon className="ml-2 w-5 h-5" />
             </Button>
@@ -261,15 +268,21 @@ const Create: React.FC = () => {
                 </div>
                 <Button
                   className="w-full mb-2"
-                  onClick={handleConvertToPDF}
                   disabled={isLoading}
+                  onClick={() => {
+                    track("ConvertToPDF");
+                    handleConvertToPDF();
+                  }}
                 >
                   Convert ({selectedFiles.size}) Files to PDF
                 </Button>
               </>
             ) : (
               <Button
-                onClick={handleCloneRepo}
+                onClick={() => {
+                  track("CloneRepo");
+                  handleCloneRepo();
+                }}
                 disabled={!repoUrl || isLoading}
                 className="mb-4"
               >
