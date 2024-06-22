@@ -157,7 +157,7 @@ const Create: React.FC = () => {
     setSelectedFiles(new Set());
     setSelectAll(false);
     setDialogOpen(false);
-    router.reload();
+    router.push("/create");
     toast.success("Logged out successfully");
   };
 
