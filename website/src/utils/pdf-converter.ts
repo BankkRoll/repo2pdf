@@ -46,7 +46,7 @@ function estimateTextWidth(text: string, fontSize: number): number {
 function splitTextIntoLines(
   text: string,
   maxWidth: number,
-  fontSize: number
+  fontSize: number,
 ): string[] {
   const words = text.split(" ");
   let lines: string[] = [];
@@ -83,17 +83,16 @@ export async function convertToPDF(
   addPageNumbers: boolean,
   addTOC: boolean,
   boldTitles: boolean,
-  watermark: string,
   customHeader: string,
   customFooter: string,
   includeDateInHeader: boolean,
   includeDateInFooter: boolean,
   fontType: string,
-  fontSize: number
+  fontSize: number,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(
-    StandardFonts[fontType as keyof typeof StandardFonts]
+    StandardFonts[fontType as keyof typeof StandardFonts],
   );
   const boldFont = await pdfDoc.embedFont(fontMapping[fontType] || fontType);
   let pageNumber = 1;
@@ -101,7 +100,6 @@ export async function convertToPDF(
   const tocEntries: { title: string; page: number }[] = [];
   const currentDate = new Date().toLocaleDateString();
 
-  // Add TOC page if needed
   if (addTOC) {
     const tocPage = pdfDoc.addPage();
     const { width, height } = tocPage.getSize();
@@ -131,7 +129,6 @@ export async function convertToPDF(
       tocEntries.push({ title: name, page: pageNumber });
     }
 
-    // Draw custom header
     if (customHeader) {
       page.drawText(customHeader, {
         x: margin,
@@ -142,7 +139,6 @@ export async function convertToPDF(
       });
     }
 
-    // Include date in header if selected
     if (includeDateInHeader) {
       page.drawText(currentDate, {
         x: width - margin - estimateTextWidth(currentDate, fontSize),
@@ -153,7 +149,6 @@ export async function convertToPDF(
       });
     }
 
-    // Draw file title
     page.drawText(name, {
       x: margin,
       y: yPosition,
@@ -162,7 +157,7 @@ export async function convertToPDF(
       color: rgb(0, 0, 0),
     });
 
-    yPosition -= lineHeight * 2; // More space after the title
+    yPosition -= lineHeight * 2;
 
     const lines = safeContent.split("\n");
     for (const line of lines) {
@@ -178,16 +173,6 @@ export async function convertToPDF(
               color: rgb(0, 0, 0),
             });
             pageNumber++;
-          }
-          if (watermark) {
-            page.drawText(watermark, {
-              x: margin,
-              y: height / 2,
-              size: fontSize * 3,
-              font: boldFont,
-              color: rgb(0.9, 0.9, 0.9),
-              opacity: 0.3,
-            });
           }
           page = pdfDoc.addPage();
           yPosition = height - margin - fontSize;
@@ -207,7 +192,6 @@ export async function convertToPDF(
       }
     }
 
-    // Draw custom footer
     if (customFooter) {
       page.drawText(customFooter, {
         x: margin,
@@ -218,7 +202,6 @@ export async function convertToPDF(
       });
     }
 
-    // Include date in footer if selected
     if (includeDateInFooter) {
       page.drawText(currentDate, {
         x: width - margin - estimateTextWidth(currentDate, fontSize),
@@ -241,7 +224,6 @@ export async function convertToPDF(
     }
   }
 
-  // Finalize TOC if needed
   if (addTOC) {
     const tocPage = pdfDoc.getPages()[0];
     const tocFontSize = 12;

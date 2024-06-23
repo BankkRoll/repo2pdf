@@ -22,7 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PiCaretUpDownFill } from "react-icons/pi";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { StandardFonts } from "pdf-lib";
 import { convertToPDF } from "@/utils/pdf-converter";
 import { toast } from "sonner";
 import { track } from "@vercel/analytics";
@@ -50,14 +49,13 @@ const Create: React.FC = () => {
   const [addPageNumbers, setAddPageNumbers] = useState<boolean>(false);
   const [addTOC, setAddTOC] = useState<boolean>(false);
   const [boldTitles, setBoldTitles] = useState<boolean>(false);
-  const [addWatermark, setAddWatermark] = useState<boolean>(false);
   const [customHeader, setCustomHeader] = useState<string>("");
   const [customFooter, setCustomFooter] = useState<string>("");
   const [includeDateInHeader, setIncludeDateInHeader] =
     useState<boolean>(false);
   const [includeDateInFooter, setIncludeDateInFooter] =
     useState<boolean>(false);
-  const [fontType, setFontType] = useState<string>(StandardFonts.Helvetica);
+  const [fontType, setFontType] = useState<string>("Courier");
   const [fontSize, setFontSize] = useState<number>(12);
   const router = useRouter();
 
@@ -124,7 +122,7 @@ const Create: React.FC = () => {
   const handleConvertToPDF = async () => {
     setIsLoading(true);
     const selectedRepoFiles = repoFiles.filter((file) =>
-      selectedFiles.has(file.path)
+      selectedFiles.has(file.path),
     );
 
     const pdfBytes = await convertToPDF(
@@ -133,13 +131,12 @@ const Create: React.FC = () => {
       addPageNumbers || addTOC,
       addTOC,
       boldTitles,
-      addWatermark ? "Watermark Text" : "",
       customHeader,
       customFooter,
       includeDateInHeader,
       includeDateInFooter,
       fontType,
-      fontSize
+      fontSize,
     );
 
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -195,7 +192,7 @@ const Create: React.FC = () => {
     <main className="flex flex-col md:flex-row justify-between p-4">
       <div className="relative flex flex-col w-full md:w-1/3 p-4">
         <h1 className="text-4xl font-bold mb-6">Create</h1>
-        {token ? (
+        {!token ? (
           <div className="flex flex-col">
             <Button
               variant="secondary"
@@ -383,13 +380,9 @@ const Create: React.FC = () => {
                         <SelectValue placeholder="Select Font Type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={StandardFonts.Courier}>
-                          Courier
-                        </SelectItem>
-                        <SelectItem value={StandardFonts.Helvetica}>
-                          Helvetica
-                        </SelectItem>
-                        <SelectItem value={StandardFonts.TimesRoman}>
+                        <SelectItem value={"Courier"}>Courier</SelectItem>
+                        <SelectItem value={"Helvetica"}>Helvetica</SelectItem>
+                        <SelectItem value={"Times-Roman"}>
                           Times Roman
                         </SelectItem>
                       </SelectContent>
