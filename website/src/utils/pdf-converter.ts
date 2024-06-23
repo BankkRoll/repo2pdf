@@ -46,7 +46,7 @@ function estimateTextWidth(text: string, fontSize: number): number {
 function splitTextIntoLines(
   text: string,
   maxWidth: number,
-  fontSize: number,
+  fontSize: number
 ): string[] {
   const words = text.split(" ");
   let lines: string[] = [];
@@ -74,7 +74,6 @@ function splitTextIntoLines(
 const fontMapping: { [key: string]: string } = {
   [StandardFonts.Courier]: StandardFonts.CourierBold,
   [StandardFonts.Helvetica]: StandardFonts.HelveticaBold,
-  [StandardFonts.TimesRoman]: StandardFonts.TimesRomanBold,
 };
 
 export async function convertToPDF(
@@ -88,11 +87,11 @@ export async function convertToPDF(
   includeDateInHeader: boolean,
   includeDateInFooter: boolean,
   fontType: string,
-  fontSize: number,
+  fontSize: number
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(
-    StandardFonts[fontType as keyof typeof StandardFonts],
+    StandardFonts[fontType as keyof typeof StandardFonts]
   );
   const boldFont = await pdfDoc.embedFont(fontMapping[fontType] || fontType);
   let pageNumber = 1;

@@ -45,13 +45,17 @@ export const Hero = () => {
   };
 
   const [selectedCommand, setSelectedCommand] = React.useState(
-    commands.__npmCommand__,
+    commands.__npmCommand__
   );
 
-  const handleSelectCommand = (command: string) => {
-    setSelectedCommand(command);
-    toast.success(`Copied ${command}`);
-  };
+const handleSelectCommand = (command: string) => {
+  setSelectedCommand(command);
+  toast.success(
+    `Copied<br/><pre class="w-full bg-gray-100 dark:bg-gray-800 p-4 rounded-sm border border-gray-300 dark:border-gray-700 mt-2"><code class="block whitespace-pre-wrap">${command}</code></pre>`
+  );
+};
+
+
 
   return (
     <section className="max-w-7xl px-2 grid lg:grid-cols-2 justify-start place-items-center py-10 md:py-32 gap-10">
@@ -92,7 +96,7 @@ export const Hero = () => {
             variants={pullupVariant}
             custom={1}
           >
-            <div className="relative w-[94%] md:w-[60%]">
+            <div className="relative max-w-[21rem]">
               <Input
                 type="text"
                 value={selectedCommand}
@@ -113,7 +117,7 @@ export const Hero = () => {
           >
             <div>
               <Link href="/create" passHref>
-                <Button className="w-full group">
+                <Button variant="ringHover" className="w-full group">
                   Create PDF
                   <ArrowRightIcon className="ml-2 w-5 h-5 transition-transform duration-300 transform group-hover:translate-x-2" />
                 </Button>
@@ -126,9 +130,9 @@ export const Hero = () => {
                 href="https://github.com/BankkRoll/repo2pdf"
                 target="_blank"
               >
-                <Button className="w-full" variant="outline">
+                <Button variant="ringHoverOutline" className="w-full group">
                   Github Repository
-                  <GitHubLogoIcon className="ml-2 w-5 h-5" />
+                  <GitHubLogoIcon className="ml-2 w-5 h-5 transition-transform duration-300 transform group-hover:translate-x-2" />
                 </Button>
               </a>
             </div>

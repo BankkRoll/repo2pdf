@@ -122,7 +122,7 @@ const Create: React.FC = () => {
   const handleConvertToPDF = async () => {
     setIsLoading(true);
     const selectedRepoFiles = repoFiles.filter((file) =>
-      selectedFiles.has(file.path),
+      selectedFiles.has(file.path)
     );
 
     const pdfBytes = await convertToPDF(
@@ -136,7 +136,7 @@ const Create: React.FC = () => {
       includeDateInHeader,
       includeDateInFooter,
       fontType,
-      fontSize,
+      fontSize
     );
 
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
@@ -195,7 +195,7 @@ const Create: React.FC = () => {
         {!token ? (
           <div className="flex flex-col">
             <Button
-              variant="secondary"
+              variant="ringHover"
               onClick={() => {
                 track("SignInWithGitHub");
                 handleSignInWithGitHub();
@@ -204,7 +204,7 @@ const Create: React.FC = () => {
               Connect
               <GitHubLogoIcon className="ml-2 w-5 h-5" />
             </Button>
-            <p className="text-sm text-center text-muted-foreground italic">
+            <p className="pt-4 text-sm text-center text-muted-foreground italic">
               Your GitHub token is NEVER STORED and used only in auth callback
               to clone and convert the repository.
             </p>
@@ -382,9 +382,6 @@ const Create: React.FC = () => {
                       <SelectContent>
                         <SelectItem value={"Courier"}>Courier</SelectItem>
                         <SelectItem value={"Helvetica"}>Helvetica</SelectItem>
-                        <SelectItem value={"Times-Roman"}>
-                          Times Roman
-                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -404,6 +401,7 @@ const Create: React.FC = () => {
                   </div>
                 </div>
                 <Button
+                variant="ringHover"
                   className="w-full mb-2"
                   disabled={isLoading}
                   onClick={() => {
@@ -416,6 +414,7 @@ const Create: React.FC = () => {
               </>
             ) : (
               <Button
+                variant="ringHover"
                 onClick={() => {
                   track("CloneRepo");
                   handleCloneRepo();
@@ -426,17 +425,23 @@ const Create: React.FC = () => {
                 Fetch Files
               </Button>
             )}
-            <div className="flex-grow"></div>
+            <div className="flex-grow min-h-20"></div>
             <div className="flex flex-row gap-2 items-center">
-              <Button
-                variant="outline"
-                className="hover:bg-transparent cursor-default flex items-center justify-center w-full"
+              <a
+                href={"https://github.com/" + username}
+                target="_blank"
+                rel="noreferrer noopener"
               >
-                {username ? `${username}` : "Loading..."}
-                <GitHubLogoIcon className="ml-2 w-5 h-5" />
-              </Button>
+                <Button
+                  variant="ringHoverOutline"
+                className="flex items-center justify-center w-full"
+                >
+                  {username ? `${username}` : "Loading..."}
+                  <GitHubLogoIcon className="ml-2 w-5 h-5" />
+                </Button>
+              </a>
               <Button
-                variant="secondary"
+                variant="ringHoverOutline"
                 onClick={handleLogout}
                 className="flex items-center justify-center w-full"
               >

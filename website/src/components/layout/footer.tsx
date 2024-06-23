@@ -1,6 +1,7 @@
 import { GitHubLogoIcon, TwitterLogoIcon } from "@radix-ui/react-icons";
-import React from "react";
+
 import { Button } from "../ui/button";
+import React from "react";
 
 export default function Footer() {
   return (
@@ -11,7 +12,7 @@ export default function Footer() {
         href="https://github.com/BankkRoll"
         target="_blank"
       >
-        <Button size="icon" variant="outline">
+        <Button size="icon" variant="gooeyLeft">
           <GitHubLogoIcon className="w-5 h-5" />
         </Button>
       </a>
@@ -20,7 +21,7 @@ export default function Footer() {
         href="https://x.com/bankkroll_eth"
         target="_blank"
       >
-        <Button size="icon" variant="outline">
+        <Button size="icon" variant="gooeyRight">
           <TwitterLogoIcon className="w-5 h-5" />
         </Button>
       </a>
