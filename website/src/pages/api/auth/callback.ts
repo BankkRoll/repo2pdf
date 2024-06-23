@@ -1,4 +1,3 @@
-// pages/api/auth/callback.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
 const clientId = process.env.GITHUB_CLIENT_ID;

@@ -1,4 +1,3 @@
-// pages/api/clone-repo.ts
 import { NextApiRequest, NextApiResponse } from "next";
 
 async function fetchRepoContents(

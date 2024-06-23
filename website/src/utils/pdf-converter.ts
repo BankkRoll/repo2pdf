@@ -1,7 +1,4 @@
-// src/utils/pdf-converter.ts
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-
-import { marked } from "marked";
 
 const universalExcludedNames = [
   ".gitignore",
@@ -33,18 +30,6 @@ const universalExcludedExtensions = [
   ".pdf",
 ];
 
-async function formatContent(
-  content: string,
-  fileName: string,
-): Promise<string> {
-  const extension = fileName.split(".").pop() || "txt";
-  if (extension === "md" || extension === "markdown") {
-    return marked(content);
-  } else {
-    return content;
-  }
-}
-
 function shouldExclude(fileName: string): boolean {
   const extension = fileName.split(".").pop() || "";
   return (
@@ -61,7 +46,7 @@ function estimateTextWidth(text: string, fontSize: number): number {
 function splitTextIntoLines(
   text: string,
   maxWidth: number,
-  fontSize: number,
+  fontSize: number
 ): string[] {
   const words = text.split(" ");
   let lines: string[] = [];
@@ -86,44 +71,103 @@ function splitTextIntoLines(
   return lines;
 }
 
+const fontMapping: { [key: string]: string } = {
+  [StandardFonts.Courier]: StandardFonts.CourierBold,
+  [StandardFonts.Helvetica]: StandardFonts.HelveticaBold,
+  [StandardFonts.TimesRoman]: StandardFonts.TimesRomanBold,
+};
+
 export async function convertToPDF(
   repoFiles: { name: string; content: string }[],
   addLineNumbers: boolean,
   addPageNumbers: boolean,
+  addTOC: boolean,
+  boldTitles: boolean,
+  watermark: string,
+  customHeader: string,
+  customFooter: string,
+  includeDateInHeader: boolean,
+  includeDateInFooter: boolean,
+  fontType: string,
+  fontSize: number
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const font = await pdfDoc.embedFont(
+    StandardFonts[fontType as keyof typeof StandardFonts]
+  );
+  const boldFont = await pdfDoc.embedFont(fontMapping[fontType] || fontType);
   let pageNumber = 1;
+  let globalLineNumber = 1;
+  const tocEntries: { title: string; page: number }[] = [];
+  const currentDate = new Date().toLocaleDateString();
+
+  // Add TOC page if needed
+  if (addTOC) {
+    const tocPage = pdfDoc.addPage();
+    const { width, height } = tocPage.getSize();
+    tocPage.drawText("Table of Contents", {
+      x: 50,
+      y: height - 50,
+      size: 24,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+  }
 
   for (const { name, content } of repoFiles) {
     if (shouldExclude(name)) {
       continue;
     }
 
-    const formattedContent = await formatContent(content, name);
-    const safeContent = formattedContent.replace(/[^\x00-\x7F]/g, "");
+    const safeContent = content.replace(/[^\x00-\x7F]/g, "");
     let page = pdfDoc.addPage();
     const { width, height } = page.getSize();
-    const fontSize = 12;
     const margin = 50;
     const lineHeight = fontSize * 1.2;
     let yPosition = height - margin - fontSize;
 
+    // Add to TOC
+    if (addTOC) {
+      tocEntries.push({ title: name, page: pageNumber });
+    }
+
+    // Draw custom header
+    if (customHeader) {
+      page.drawText(customHeader, {
+        x: margin,
+        y: height - margin,
+        size: fontSize,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+    }
+
+    // Include date in header if selected
+    if (includeDateInHeader) {
+      page.drawText(currentDate, {
+        x: width - margin - estimateTextWidth(currentDate, fontSize),
+        y: height - margin,
+        size: fontSize,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+    }
+
+    // Draw file title
     page.drawText(name, {
       x: margin,
       y: yPosition,
-      size: fontSize,
-      font,
+      size: boldTitles ? fontSize + 6 : fontSize,
+      font: boldTitles ? boldFont : font,
       color: rgb(0, 0, 0),
     });
 
-    yPosition -= lineHeight;
+    yPosition -= lineHeight * 2; // More space after the title
 
     const lines = safeContent.split("\n");
     for (const line of lines) {
       const splitLines = splitTextIntoLines(line, width - 2 * margin, fontSize);
-      for (let index = 0; index < splitLines.length; index++) {
-        const splitLine = splitLines[index];
+      for (const splitLine of splitLines) {
         if (yPosition <= margin) {
           if (addPageNumbers) {
             page.drawText(`Page ${pageNumber}`, {
@@ -135,11 +179,21 @@ export async function convertToPDF(
             });
             pageNumber++;
           }
+          if (watermark) {
+            page.drawText(watermark, {
+              x: margin,
+              y: height / 2,
+              size: fontSize * 3,
+              font: boldFont,
+              color: rgb(0.9, 0.9, 0.9),
+              opacity: 0.3,
+            });
+          }
           page = pdfDoc.addPage();
           yPosition = height - margin - fontSize;
         }
         const textToDraw = addLineNumbers
-          ? `${index + 1}: ${splitLine}`
+          ? `${globalLineNumber}: ${splitLine}`
           : splitLine;
         page.drawText(textToDraw, {
           x: margin,
@@ -149,7 +203,30 @@ export async function convertToPDF(
           color: rgb(0, 0, 0),
         });
         yPosition -= lineHeight;
+        if (addLineNumbers) globalLineNumber++;
       }
+    }
+
+    // Draw custom footer
+    if (customFooter) {
+      page.drawText(customFooter, {
+        x: margin,
+        y: margin / 2,
+        size: fontSize,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+    }
+
+    // Include date in footer if selected
+    if (includeDateInFooter) {
+      page.drawText(currentDate, {
+        x: width - margin - estimateTextWidth(currentDate, fontSize),
+        y: margin / 2,
+        size: fontSize,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
     }
 
     if (addPageNumbers) {
@@ -162,6 +239,24 @@ export async function convertToPDF(
       });
       pageNumber++;
     }
+  }
+
+  // Finalize TOC if needed
+  if (addTOC) {
+    const tocPage = pdfDoc.getPages()[0];
+    const tocFontSize = 12;
+    const tocLineHeight = tocFontSize * 1.2;
+    let tocYPosition = tocPage.getHeight() - 100;
+    tocEntries.forEach((entry, index) => {
+      tocPage.drawText(`${index + 1}. ${entry.title} ........ ${entry.page}`, {
+        x: 50,
+        y: tocYPosition,
+        size: tocFontSize,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      tocYPosition -= tocLineHeight;
+    });
   }
 
   return await pdfDoc.save();

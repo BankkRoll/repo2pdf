@@ -7,18 +7,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ExitIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCallback, useEffect, useState } from "react";
 
 import { AnimatedBeamer } from "@/components/ui/beams/animated-beamer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { PiCaretUpDownFill } from "react-icons/pi";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { StandardFonts } from "pdf-lib";
 import { convertToPDF } from "@/utils/pdf-converter";
 import { toast } from "sonner";
 import { track } from "@vercel/analytics";
 import { useRouter } from "next/router";
-import { useTheme } from "next-themes";
 
 interface RepoFile {
   id: number;
@@ -40,8 +48,18 @@ const Create: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [addLineNumbers, setAddLineNumbers] = useState<boolean>(false);
   const [addPageNumbers, setAddPageNumbers] = useState<boolean>(false);
+  const [addTOC, setAddTOC] = useState<boolean>(false);
+  const [boldTitles, setBoldTitles] = useState<boolean>(false);
+  const [addWatermark, setAddWatermark] = useState<boolean>(false);
+  const [customHeader, setCustomHeader] = useState<string>("");
+  const [customFooter, setCustomFooter] = useState<string>("");
+  const [includeDateInHeader, setIncludeDateInHeader] =
+    useState<boolean>(false);
+  const [includeDateInFooter, setIncludeDateInFooter] =
+    useState<boolean>(false);
+  const [fontType, setFontType] = useState<string>(StandardFonts.Helvetica);
+  const [fontSize, setFontSize] = useState<number>(12);
   const router = useRouter();
-  const { theme } = useTheme();
 
   useEffect(() => {
     const { token } = router.query;
@@ -106,13 +124,24 @@ const Create: React.FC = () => {
   const handleConvertToPDF = async () => {
     setIsLoading(true);
     const selectedRepoFiles = repoFiles.filter((file) =>
-      selectedFiles.has(file.path),
+      selectedFiles.has(file.path)
     );
+
     const pdfBytes = await convertToPDF(
       selectedRepoFiles,
       addLineNumbers,
-      addPageNumbers,
+      addPageNumbers || addTOC,
+      addTOC,
+      boldTitles,
+      addWatermark ? "Watermark Text" : "",
+      customHeader,
+      customFooter,
+      includeDateInHeader,
+      includeDateInFooter,
+      fontType,
+      fontSize
     );
+
     const blob = new Blob([pdfBytes], { type: "application/pdf" });
     const pdfUrl = URL.createObjectURL(blob);
     setPdfUrl(pdfUrl);
@@ -166,7 +195,7 @@ const Create: React.FC = () => {
     <main className="flex flex-col md:flex-row justify-between p-4">
       <div className="relative flex flex-col w-full md:w-1/3 p-4">
         <h1 className="text-4xl font-bold mb-6">Create</h1>
-        {!token ? (
+        {token ? (
           <div className="flex flex-col">
             <Button
               variant="secondary"
@@ -196,8 +225,9 @@ const Create: React.FC = () => {
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild>
                     <div className="w-full">
-                      <Button className="w-full mb-2">
+                      <Button variant="outline" className="w-full mb-2">
                         Select Files ({selectedFiles.size})
+                        <PiCaretUpDownFill className="ml-2 w-5 h-5" />
                       </Button>
                     </div>
                   </DialogTrigger>
@@ -265,6 +295,120 @@ const Create: React.FC = () => {
                       Add Page Numbers ᴮᴱᵀᴬ
                     </label>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="addTOC"
+                      checked={addTOC}
+                      onCheckedChange={() => {
+                        setAddTOC(!addTOC);
+                        if (!addPageNumbers && !addTOC) {
+                          setAddPageNumbers(true);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="addTOC"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Add Table of Contents ᴮᴱᵀᴬ
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="boldTitles"
+                      checked={boldTitles}
+                      onCheckedChange={() => setBoldTitles(!boldTitles)}
+                    />
+                    <label
+                      htmlFor="boldTitles"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Bold Titles ᴮᴱᵀᴬ
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="includeDate"
+                      checked={includeDateInHeader}
+                      onCheckedChange={() =>
+                        setIncludeDateInHeader(!includeDateInHeader)
+                      }
+                    />
+                    <label
+                      htmlFor="includeDate"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Include Date in Header ᴮᴱᵀᴬ
+                    </label>
+                  </div>
+                  <Input
+                    placeholder="Custom Header"
+                    value={customHeader}
+                    onChange={(e) => setCustomHeader(e.target.value)}
+                    className="mb-2"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="includeDate"
+                      checked={includeDateInFooter}
+                      onCheckedChange={() =>
+                        setIncludeDateInFooter(!includeDateInFooter)
+                      }
+                    />
+                    <label
+                      htmlFor="includeDate"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Include Date in Footer ᴮᴱᵀᴬ
+                    </label>
+                  </div>
+                  <Input
+                    placeholder="Custom Footer"
+                    value={customFooter}
+                    onChange={(e) => setCustomFooter(e.target.value)}
+                    className="mb-2"
+                  />
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="fontType"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Select Font Type
+                    </label>
+                    <Select
+                      value={fontType}
+                      onValueChange={(value) => setFontType(value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Font Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={StandardFonts.Courier}>
+                          Courier
+                        </SelectItem>
+                        <SelectItem value={StandardFonts.Helvetica}>
+                          Helvetica
+                        </SelectItem>
+                        <SelectItem value={StandardFonts.TimesRoman}>
+                          Times Roman
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="fontSize"
+                      className="text-sm font-medium leading-none"
+                    >
+                      Font Size
+                    </label>
+                    <Input
+                      type="number"
+                      value={fontSize}
+                      onChange={(e) => setFontSize(Number(e.target.value))}
+                      className="w-20"
+                    />
+                  </div>
                 </div>
                 <Button
                   className="w-full mb-2"
@@ -312,21 +456,21 @@ const Create: React.FC = () => {
       </div>
 
       <div className="flex flex-col w-full md:w-2/3 p-4 items-center">
-        {!pdfUrl ? (
-          <iframe
-            src={"/repo2pdf-web.pdf"}
-            title="PDF Preview"
-            className="min-h-[400px] md:min-h-[80svh] w-full h-full border rounded-lg"
-          />
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="w-full h-full flex items-center justify-center">
             <AnimatedBeamer />
           </div>
-        ) : (
+        ) : pdfUrl ? (
           <iframe
             src={pdfUrl}
             title="PDF Preview"
-            className="min-h-[400px] md:min-h-[80svh] w-full h-full border rounded-lg"
+            className="min-h-[800px] md:min-h-[80svh] w-full h-full border rounded-lg"
+          />
+        ) : (
+          <iframe
+            src={"/repo2pdf-web.pdf"}
+            title="PDF Preview"
+            className="min-h-[800px] md:min-h-[80svh] w-full h-full border rounded-lg"
           />
         )}
       </div>

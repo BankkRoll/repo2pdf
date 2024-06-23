@@ -1,5 +1,5 @@
-// pages/api/auth/github.ts
 import { NextApiRequest, NextApiResponse } from "next";
+
 import { v4 as uuidv4 } from "uuid";
 
 const clientId = process.env.GITHUB_CLIENT_ID;
