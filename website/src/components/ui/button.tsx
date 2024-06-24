@@ -64,7 +64,6 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
-  track?: string;
 }
 
 export type ButtonIconProps = IconProps | IconRefProps;
@@ -81,7 +80,6 @@ const Button = React.forwardRef<
       asChild = false,
       Icon,
       iconPlacement,
-      track,
       onClick,
       ...props
     },
@@ -89,20 +87,10 @@ const Button = React.forwardRef<
   ) => {
     const Comp = asChild ? Slot : "button";
 
-    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (track && typeof window.umami === "function") {
-        window.umami(track);
-      }
-      if (onClick) {
-        onClick(e);
-      }
-    };
-
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        onClick={handleClick}
         {...props}
       >
         {Icon && iconPlacement === "left" && (

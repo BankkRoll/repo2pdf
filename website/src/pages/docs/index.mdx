@@ -1,0 +1,43 @@
+import DocsLayout from "../../components/docs/layout/layout.tsx";
+
+# Welcome to shad-next Documentation
+
+Welcome to the official documentation of **shad-next**. Here you will find all the information you need to use our products and services.
+
+## Getting Started
+
+The `docs/` route is set up to use MDX (Markdown with JSX) for easy and flexible documentation. Each section of the documentation is organized into subdirectories, making it simple to navigate and maintain.
+
+### Structure
+
+The documentation is divided into several key sections:
+
+- **Introduction**: Provides an overview of the documentation and the company.
+- **Installation**: Details the steps required to install the company's products.
+- **Quick Start**: Offers a quick start guide for new users.
+
+### Routing
+
+Each section is a subdirectory within the `docs/` directory. The routing is automatically handled by Next.js, allowing you to create nested documentation pages easily. For example:
+
+- `docs/introduction.mdx` corresponds to the **Introduction** page.
+- `docs/installation.mdx` corresponds to the **Installation** page.
+- `docs/installation/quick-start.mdx` corresponds to the **Quick Start** page within the Installation section.
+
+### How to Use
+
+To add a new section to the documentation:
+
+1. **Create a new file**: Add a new `.mdx` file in the appropriate subdirectory within `docs/`.
+2. **Use MDX Components**: Utilize MDX components to style and structure your content. You can import custom components to enhance the documentation.
+3. **Link Pages**: Use relative links to connect different parts of the documentation.
+
+## Example Sections
+
+- [Introduction](./introduction)
+- [Installation](./installation)
+- [Quick Start](./installation/quick-start)
+
+export default function MDXPage({ children }) {
+  return <DocsLayout>{children}</DocsLayout>;
+}

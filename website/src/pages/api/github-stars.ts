@@ -10,7 +10,7 @@ export default async function handler(
 
   try {
     const response = await fetch(
-      `https://api.github.com/repos/BankkRoll/repo2pdf`,
+      `https://api.github.com/repos/BankkRoll/shad-next`,
       {
         headers: {
           "Content-Type": "application/json",

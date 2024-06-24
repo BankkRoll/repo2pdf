@@ -1,0 +1,28 @@
+import DocsLayout from "../../../components/docs/layout/layout.tsx";
+import { Callout } from "../../../components/docs/components/callout";
+
+This section provides a quick start guide for the callout component.
+
+### Callout
+
+The `Callout` component is used to highlight important information. It supports different types such as `info`, `warning`, `error`, and `success`.
+
+<Callout type="info" title="Note">
+  This is an informational callout.
+</Callout>
+
+<Callout type="warning" title="Warning">
+  This is a warning callout.
+</Callout>
+
+<Callout type="error" title="Error">
+  This is an error callout.
+</Callout>
+
+<Callout type="success" title="Success">
+  This is a success callout.
+</Callout>
+
+export default function MDXPage({ children }) {
+  return <DocsLayout>{children}</DocsLayout>;
+}

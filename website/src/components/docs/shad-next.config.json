@@ -1,58 +1,3 @@
-# shad-next Starter
-
-Welcome to the `shad-next` documentation template. This template provides a flexible and easy-to-use structure for building documentation with Next.js and MDX.
-
-## Getting Started
-
-To get started with the `shad-next` template, follow the installation and setup instructions below.
-
-### Installation
-
-1. **Clone the repository**:
-
-   ```bash
-   git clone https://github.com/BankkRoll/shad-next.git
-   cd shad-next
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**:
-   Rename the `.env.example` file to `.env` and fill in the necessary values.
-
-   ```bash
-   mv .env.example .env
-   ```
-
-   Example `.env` file:
-
-   ```
-   GITHUB_CLIENT_ID=your_github_client_id
-   GITHUB_CLIENT_SECRET=your_github_client_secret
-   GITHUB_REDIRECT_URI=your_github_redirect_uri
-   ```
-
-### Running the Development Server
-
-To start the development server, run:
-
-```bash
-npm run dev
-```
-
-Open your browser and navigate to `http://localhost:3000` to see your documentation site in action.
-
-## Editing Documentation Meta and Routing
-
-To edit the meta information and routing for your documentation, modify the `shad-next.config.json` file located in the `src/components/docs` directory.
-
-### Example `shad-next.config.json`
-
-```json
 {
   "title": "shad-next Documentation",
   "companyName": "shad-next",
@@ -111,4 +56,3 @@ To edit the meta information and routing for your documentation, modify the `sha
     }
   ]
 }
-```

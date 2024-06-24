@@ -1,0 +1,14 @@
+import DocsLayout from "../../../components/docs/layout/layout.tsx";
+import { Npm2Yarn } from "../../../components/docs/components/npm2yarn";
+
+This section provides a quick start guide for the npm2yarn component.
+
+### Npm2Yarn
+
+The `Npm2Yarn` component converts npm commands to other package managers' commands.
+
+<Npm2Yarn packageName="repo2pdf" />
+
+export default function MDXPage({ children }) {
+  return <DocsLayout>{children}</DocsLayout>;
+}
