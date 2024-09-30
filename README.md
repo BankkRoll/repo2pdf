@@ -3,12 +3,11 @@
 ![npm](https://img.shields.io/npm/v/repo2pdf)
 ![npm](https://img.shields.io/npm/dt/repo2pdf)
 ![NPM](https://img.shields.io/npm/l/repo2pdf)
-![GitHub Stars](https://img.shields.io/github/stars/BankkRoll/repo2pdf)
-![GitHub Forks](https://img.shields.io/github/forks/BankkRoll/repo2pdf)
 ![GitHub issues](https://img.shields.io/github/issues/BankkRoll/repo2pdf)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/BankkRoll/repo2pdf)
-![GitHub top language](https://img.shields.io/github/languages/top/BankkRoll/repo2pdf)
 ![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
+![GitHub Stars](https://img.shields.io/github/stars/BankkRoll/repo2pdf)
+![GitHub Forks](https://img.shields.io/github/forks/BankkRoll/repo2pdf)
 
 #### NPM: https://www.npmjs.com/package/repo2pdf
 
@@ -17,6 +16,8 @@
 repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
 
 - [repo2pdf](#repo2pdf)
+      - [NPM: https://www.npmjs.com/package/repo2pdf](#npm-httpswwwnpmjscompackagerepo2pdf)
+      - [Website: https://repo2pdf.site](#website-httpsrepo2pdfsite)
   - [Installation and Usage](#installation-and-usage)
     - [Installing and Using repo2pdf with NPX](#installing-and-using-repo2pdf-with-npx)
     - [Installing and Using repo2pdf by Cloning the Repository](#installing-and-using-repo2pdf-by-cloning-the-repository)
@@ -27,8 +28,7 @@ repo2pdf is an innovative and versatile tool designed to seamlessly transform Gi
     - [Reporting Bugs](#reporting-bugs)
     - [Suggesting Enhancements](#suggesting-enhancements)
     - [Writing Code](#writing-code)
-    - [Meet Our Contributors](#meet-our-contributors)
-  - [Project Structure](#project-structure)
+  - [Meet Our Contributors](#meet-our-contributors)
   - [License](#license)
   - [Star History](#star-history)
 
@@ -39,7 +39,6 @@ repo2pdf is an innovative and versatile tool designed to seamlessly transform Gi
 repo2pdf can be installed by either [directly using NPX](#installing-and-using-repo2pdf-with-npx) or [cloning the repository from GitHub](#installing-and-using-repo2pdf-by-cloning-the-repository). The steps and prompts vary based on the chosen method.
 
 > NEW! Use the webapp [here](https://repo2pdf.site)
-
 ---
 
 ### Installing and Using repo2pdf with NPX
@@ -216,21 +215,6 @@ If you're up for rolling up your sleeves to contribute code to fix a bug or impl
 4. Submit a pull request from your branch to the main repo2pdf repository.
 
 In your pull request, please provide a clear description of the changes you've made. We appreciate contributions that adhere to our coding conventions and are consistent with the existing codebase - it helps us maintain the quality of the project and makes the review process more efficient.
-
-Here are some feature ideas and improvements that could be implemented in repo2pdf to enhance its functionality and user experience:
-
-- **Table of Contents Generation:** Auto-generate sections based on directories and subsections based on files.
-- **Customizable Themes:** Enable customizations for fonts, colors, and layout of the generated PDF.
-- **Interactive Progress Bar:** Show a real-time progress bar in the terminal during the conversion process.
-- **Support for Private Repositories:** Implement OAuth2 GitHub authentication for private repositories.
-- **Enhanced Error Handling:** Provide clear error messages when a repository cannot be cloned.
-- **Conversion Options Presets:** Define presets like 'minimalist': no line numbers, no highlighting, 'full-featured': line numbers, syntax highlighting.
-- **Support for Additional VCS:** Extend support for other version control systems like GitLab, Bitbucket, and others.
-- **Support for Non-Git Repositories:** Add support for other version control systems such as Mercurial or SVN.
-- **Client-Side Web Application:** Develop a user-friendly web application for converting repositories and customizing settings.
-- **Text Compression:** Use font subsetting and compression techniques to reduce the size of the generated PDF.
-
-Feel free to contribute to the project by implementing any of these ideas or suggesting new ones!
 
 ---
 
