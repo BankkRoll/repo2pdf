@@ -1,5 +1,20 @@
 # repo2pdf
 
+<table style="width: 100%;">
+  <tr>
+    <td style="width: 50%; text-align: center;">
+      <a href="https://www.producthunt.com/posts/repo2pdf?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-repo2pdf" target="_blank">
+        <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=493359&theme=dark" alt="repo2pdf - Turn your GitHub repository into a PDF with a few clicks | Product Hunt" style="width: 100%; max-width: 250px; height: auto;" />
+      </a>
+    </td>
+    <td style="width: 50%; text-align: center;">
+      <a href="https://www.producthunt.com/products/repo2pdf/reviews?utm_source=badge-product_review&utm_medium=badge&utm_souce=badge-repo2pdf" target="_blank">
+        <img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=610037&theme=dark" alt="repo2pdf - Turn your GitHub repository into a PDF with a few clicks | Product Hunt" style="width: 100%; max-width: 250px; height: auto;" />
+      </a>
+    </td>
+  </tr>
+</table>
+
 ![npm](https://img.shields.io/npm/v/repo2pdf)
 ![npm](https://img.shields.io/npm/dt/repo2pdf)
 ![NPM](https://img.shields.io/npm/l/repo2pdf)
@@ -12,8 +27,6 @@
 #### NPM: https://www.npmjs.com/package/repo2pdf
 
 #### Website: https://repo2pdf.site
-
-<a href="https://www.producthunt.com/posts/repo2pdf?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-repo2pdf" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=493359&theme=dark" alt="repo2pdf - Turn&#0032;your&#0032;GitHub&#0032;repository&#0032;into&#0032;a&#0032;PDF&#0032;with&#0032;a&#0032;few&#0032;clicks&#0046; | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 
 repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
 
