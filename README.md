@@ -1,20 +1,5 @@
 # repo2pdf
 
-<table style="width: 100%;">
-  <tr>
-    <td style="width: 50%; text-align: center;">
-      <a href="https://www.producthunt.com/posts/repo2pdf?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-repo2pdf" target="_blank">
-        <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=493359&theme=dark" alt="repo2pdf - Turn your GitHub repository into a PDF with a few clicks | Product Hunt" style="width: 100%; max-width: 250px; height: auto;" />
-      </a>
-    </td>
-    <td style="width: 50%; text-align: center;">
-      <a href="https://www.producthunt.com/products/repo2pdf/reviews?utm_source=badge-product_review&utm_medium=badge&utm_souce=badge-repo2pdf" target="_blank">
-        <img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=610037&theme=dark" alt="repo2pdf - Turn your GitHub repository into a PDF with a few clicks | Product Hunt" style="width: 100%; max-width: 250px; height: auto;" />
-      </a>
-    </td>
-  </tr>
-</table>
-
 ![npm](https://img.shields.io/npm/v/repo2pdf)
 ![npm](https://img.shields.io/npm/dt/repo2pdf)
 ![NPM](https://img.shields.io/npm/l/repo2pdf)
