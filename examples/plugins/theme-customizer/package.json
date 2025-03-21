@@ -1,0 +1,11 @@
+{
+  "name": "repo2pdf-plugin-theme-customizer",
+  "version": "1.0.0",
+  "description": "Theme customization plugin for repo2pdf",
+  "main": "index.js",
+  "author": "repo2pdf Team",
+  "license": "MIT",
+  "repo2pdfHooks": [
+    "postGenerate"
+  ]
+}

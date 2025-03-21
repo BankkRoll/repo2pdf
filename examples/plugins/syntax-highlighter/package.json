@@ -1,0 +1,14 @@
+{
+  "name": "repo2pdf-plugin-syntax-highlighter",
+  "version": "1.0.0",
+  "description": "Syntax highlighting plugin for repo2pdf",
+  "main": "index.js",
+  "author": "repo2pdf Team",
+  "license": "MIT",
+  "repo2pdfHooks": [
+    "transformContent"
+  ],
+  "dependencies": {
+    "highlight.js": "^11.7.0"
+  }
+}
