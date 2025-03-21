@@ -1,4 +1,0 @@
-{
-    "ignoredFiles": ["tsconfig.json", "dist", "node_modules"],
-    "ignoredExtensions": [".raw"]
-}
