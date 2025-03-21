@@ -1,3 +1,7 @@
+# Full rewrite of repo2pdf in progress..
+# Full rewrite of repo2pdf in progress..
+# Full rewrite of repo2pdf in progress..
+
 # repo2pdf
 
 ![npm](https://img.shields.io/npm/v/repo2pdf)
@@ -13,224 +17,513 @@
 
 #### Website: https://repo2pdf.site
 
-repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
-
+## Table of Contents
+<details>
+ <summary>View Table of Contents</summary>
 - [repo2pdf](#repo2pdf)
-  - [Installation and Usage](#installation-and-usage)
-    - [Installing and Using repo2pdf with NPX](#installing-and-using-repo2pdf-with-npx)
-    - [Installing and Using repo2pdf by Cloning the Repository](#installing-and-using-repo2pdf-by-cloning-the-repository)
+      - [NPM: https://www.npmjs.com/package/repo2pdf](#npm-httpswwwnpmjscompackagerepo2pdf)
+      - [Website: https://repo2pdf.site](#website-httpsrepo2pdfsite)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Global Installation](#global-installation)
+    - [Local Installation](#local-installation)
+  - [Usage](#usage)
+    - [Command Line](#command-line)
+    - [Interactive Mode](#interactive-mode)
+    - [Programmatic API](#programmatic-api)
   - [Configuration](#configuration)
-    - [Example of file structure](#example-of-file-structure)
-  - [Troubleshooting / FAQ](#troubleshooting--faq)
-  - [Contributing to repo2pdf](#contributing-to-repo2pdf)
-    - [Reporting Bugs](#reporting-bugs)
-    - [Suggesting Enhancements](#suggesting-enhancements)
-    - [Writing Code](#writing-code)
-  - [Meet Our Contributors](#meet-our-contributors)
+    - [Configuration File](#configuration-file)
+    - [Environment Variables](#environment-variables)
+  - [Architecture](#architecture)
+    - [Core Components](#core-components)
+    - [Extension Points](#extension-points)
+  - [Advanced Usage](#advanced-usage)
+    - [Custom Styling](#custom-styling)
+    - [Filtering Files](#filtering-files)
+    - [Performance Optimization](#performance-optimization)
+  - [Development](#development)
+    - [Building from Source](#building-from-source)
+    - [Running Tests](#running-tests)
+    - [Contributing](#contributing)
   - [License](#license)
-  - [Star History](#star-history)
+  - [Technical Architecture Details](#technical-architecture-details)
+    - [Repository Fetching](#repository-fetching)
+    - [File Processing](#file-processing)
+    - [Output Generation](#output-generation)
+    - [Parallel Processing](#parallel-processing)
+    - [Error Handling](#error-handling)
+    - [Testing](#testing)
+    - [File Directory](#file-directory)
+    - [repo2pdf Architecture](#repo2pdf-architecture)
+</details>
 
----
+## Overview
 
-## Installation and Usage
+repo2pdf is a comprehensive TypeScript tool designed to convert Git repositories (GitHub, GitLab, Bitbucket, or local) into various document formats (PDF, HTML, EPUB, MOBI) while preserving code syntax highlighting, directory structure, and metadata. It's perfect for code documentation, archiving, offline reading, or sharing code in a more accessible format.
 
-repo2pdf can be installed by either [directly using NPX](#installing-and-using-repo2pdf-with-npx) or [cloning the repository from GitHub](#installing-and-using-repo2pdf-by-cloning-the-repository). The steps and prompts vary based on the chosen method.
+## Features
 
-> NEW! Use the webapp [here](https://repo2pdf.site)
----
+- **Multiple VCS Support**: GitHub, GitLab, Bitbucket, and local repositories
+- **Multiple Output Formats**: PDF, HTML, EPUB, and MOBI
+- **Advanced Syntax Highlighting**: Using Shiki with support for 25+ programming languages
+- **Customizable Styling**: Themes, fonts, line numbers, and custom CSS
+- **Binary File Support**: Handles images and provides metadata for binary files
+- **Performance Optimization**: Parallel processing with concurrency control
+- **Comprehensive Filtering**: Ignore patterns, hidden files, and binary files
+- **Interactive CLI Mode**: User-friendly command-line interface
+- **Programmatic API**: Use as a library in your Node.js applications
+- **Robust Error Handling**: Detailed error messages and logging
+- **Extensive Configuration**: Via CLI, config file, or environment variables
 
-### Installing and Using repo2pdf with NPX
+## Installation
 
-This method downloads and installs the latest version of repo2pdf from the NPM registry.
+### Global Installation
 
-1. Install repo2pdf using NPX:
-
-```shell
-npx repo2pdf
+```bash
+npm install -g repo2pdf
 ```
 
-2. The script will start running. Follow the prompt and provide the necessary information.
-   - GitHub repository URL
-   - Output file name
-   - Decision on whether to keep the cloned repository (Y/N)
+### Local Installation
 
----
-
-### Installing and Using repo2pdf by Cloning the Repository
-
-This method involves manually cloning the repo2pdf repository and setting it up on your local machine.
-
-1. Clone the repository:
-
-```shell
-git clone https://github.com/BankkRoll/repo2pdf
+```bash
+npm install repo2pdf
 ```
 
-2. Navigate to the repo2pdf directory:
+## Usage
 
-```shell
-cd repo2pdf
+### Command Line
+
+Convert a GitHub repository to PDF:
+
+```bash
+repo2pdf convert https://github.com/username/repository --output repo.pdf
 ```
 
-3. Install the dependencies:
+Convert a local repository to HTML:
 
-```shell
-npm install
+```bash
+repo2pdf convert /path/to/local/repo --format html --output repo.html
 ```
 
-4. Build the script:
+With additional options:
 
-```shell
-npm run build
+```bash
+repo2pdf convert https://github.com/username/repository \
+  --output repo.pdf \
+  --branch develop \
+  --token YOUR_GITHUB_TOKEN \
+  --theme monokai \
+  --no-line-numbers \
+  --ignore node_modules dist .git \
+  --include-binary \
+  --debug
 ```
 
-5. Run the script:
+### Interactive Mode
 
-```shell
-npm start
+For a guided experience:
+
+```bash
+repo2pdf convert --interactive
 ```
 
-6. The script will start running. Follow the prompt and provide the necessary information:
-   - Decision on whether to clone a repository or use a local repository
-     - If using a local repository, provide the path
-     - If cloning a repository, provide the URL
-   - Features checklist for
-     - add line numbers in the PDF
-     - add page numbers in the PDF
-     - add highlighting in the PDF
-     - remove comments from the code
-     - remove empty lines from the code
-     - one file or one PDF per file
-   - Name of the output PDF file or output directory
-   - Decision on whether to keep the cloned repository after generating the PDF
+This will prompt you for all necessary options with sensible defaults.
 
-Please note that you need to have Node > 18 and git(for non-local repos) installed on your system in order to run repo2pdf.
+### Programmatic API
 
----
+```javascript
+import { convertRepository } from "repo2pdf";
+
+async function main() {
+  try {
+    const result = await convertRepository({
+      repository: {
+        url: "https://github.com/username/repository",
+        branch: "main",
+        token: "YOUR_GITHUB_TOKEN", // Optional for private repos
+      },
+      output: {
+        format: "pdf",
+        outputPath: "./output.pdf",
+        singleFile: true,
+      },
+      style: {
+        theme: "github-dark",
+        lineNumbers: true,
+        pageNumbers: true,
+        includeTableOfContents: true,
+      },
+      processing: {
+        ignorePatterns: ["node_modules/**", "dist/**"],
+        includeBinaryFiles: true,
+      },
+    });
+
+    console.log(`Repository converted successfully: ${result.outputPath}`);
+    console.log(`File size: ${result.fileSize} bytes`);
+    console.log(`Generation time: ${result.generationTime}ms`);
+  } catch (error) {
+    console.error("Error converting repository:", error);
+  }
+}
+
+main();
+```
 
 ## Configuration
 
-repo2pdf automatically ignores certain file types and directories (e.g., `.png`, `.git`).
-To customize the files and directories to ignore, you can add a `repo2pdf.ignore` file to the root of your repository.
+### Configuration File
 
-Please note that if you use a local repository, the `repo2pdf.ignore` file must be in the root of the repository directory. And you might need to add more directories to the ignore list, as the script does not automatically ignores different build files and directories.
+repo2pdf uses [cosmiconfig](https://github.com/davidtheclark/cosmiconfig) to find and load a configuration file. It looks for:
 
-### Example of file structure
+- `repo2pdf.config.js`
+- `repo2pdf.config.json`
+- `.repo2pdfrc`
+- `.repo2pdfrc.json`
+- `.repo2pdfrc.js`
+- `repo2pdf` property in `package.json`
 
-```json
+Example configuration file (repo2pdf.config.js):
+
+```javascript
+module.exports = {
+  repository: {
+    branch: "main",
+  },
+  output: {
+    format: "pdf",
+    pageSize: "A4",
+    landscape: false,
+    margin: {
+      top: "1cm",
+      right: "1cm",
+      bottom: "1cm",
+      left: "1cm",
+    },
+  },
+  style: {
+    theme: "github-dark",
+    fontSize: "14px",
+    fontFamily: 'Roboto, "Helvetica Neue", Arial, sans-serif',
+    lineNumbers: true,
+    pageNumbers: true,
+    includeTableOfContents: true,
+  },
+  processing: {
+    ignorePatterns: ["node_modules/**", ".git/**", "dist/**", "build/**"],
+    maxConcurrency: 5,
+    removeComments: false,
+    removeEmptyLines: false,
+    includeBinaryFiles: true,
+    includeHiddenFiles: false,
+  },
+  debug: false,
+};
+```
+
+### Environment Variables
+
+- `REPO2PDF_TOKEN`: GitHub/GitLab/Bitbucket token for private repositories
+- `REPO2PDF_BRANCH`: Repository branch to use
+- `REPO2PDF_DEBUG`: Enable debug mode (set to "true")
+
+## Architecture
+
+repo2pdf has been fully rebuilt with a modular, extensible architecture that separates concerns and allows for easy customization.
+
+### Core Components
+
+1. **Configuration Management**
+
+   - `ConfigLoader`: Loads and merges configuration from various sources
+   - `default-config.ts`: Provides sensible defaults
+
+2. **Repository Fetching**
+
+   - `RepositoryFetcher` interface: Common contract for all fetchers
+   - Implementations for GitHub, GitLab, Bitbucket, and local repositories
+
+3. **File Processing**
+
+   - `FileProcessor`: Orchestrates processing of different file types
+   - Specialized processors for code, images, and binary files
+   - Syntax highlighting with Shiki
+
+4. **Output Generation**
+
+   - HTML generation as the base format
+   - PDF generation using Puppeteer
+   - EPUB generation for e-readers
+   - MOBI generation for Kindle (using Calibre if available)
+
+5. **Utilities**
+   - Logging with different levels
+   - Parallel processing with concurrency control
+   - File type detection and handling
+   - Comprehensive error handling
+
+### Extension Points
+
+repo2pdf is designed to be extensible. Key extension points include:
+
+1. **Custom Fetchers**: Implement the `RepositoryFetcher` interface for additional VCS platforms
+2. **Custom Processors**: Extend the processing pipeline for special file types
+3. **Custom Generators**: Add support for additional output formats
+4. **Custom Styling**: Apply custom CSS to the generated output
+
+## Advanced Usage
+
+### Custom Styling
+
+You can provide custom CSS to style the output:
+
+```bash
+repo2pdf convert https://github.com/username/repository \
+  --output repo.pdf \
+  --theme github-dark \
+  --custom-css path/to/custom.css
+```
+
+Or in the configuration file:
+
+```javascript
 {
-  "ignoredFiles": ["tsconfig.json", "dist", "node_modules"],
-  "ignoredExtensions": [".raw"]
+  style: {
+    customCSS: `
+      body {
+        font-family: 'Fira Code', monospace;
+      }
+      .file-header {
+        background-color: #2d2d2d;
+        color: #ffffff;
+      }
+    `;
+  }
 }
 ```
 
----
+### Filtering Files
 
-## Troubleshooting / FAQ
+Ignore specific files or directories:
 
-<details>
-  <summary>Q: I'm getting an error "Failed to install [package-name]". What should I do?</summary>
-  A: Make sure you have Node.js and npm installed on your system. Try running the following command to install the required package manually:
-
-```shell
-npm install [package-name]
+```bash
+repo2pdf convert https://github.com/username/repository \
+  --output repo.pdf \
+  --ignore node_modules dist .git "**/*.log" "**/*.lock"
 ```
 
-</details>
+Include or exclude binary and hidden files:
 
-<details>
-  <summary>Q: How can I customize the styling of the generated PDF?</summary>
-  A: You can modify the code in `clone.ts` or `syntax.ts` to change the font, font size, colors, and other styling options for the PDF document.
-
-```typescript
-// Example: Changing font size in syntax.ts
-doc.fontSize(12);
+```bash
+repo2pdf convert https://github.com/username/repository \
+  --output repo.pdf \
+  --include-binary \
+  --include-hidden
 ```
 
-</details>
+### Performance Optimization
 
-<details>
-  <summary>Q: What types of files are supported for conversion to PDF?</summary>
-  A: Currently, repo2pdf supports all text-based files for conversion to PDF. Binary files like images or compiled binaries are ignored.
-</details>
+Control concurrency for large repositories:
 
-<details>
-  <summary>Q: How can I modify the ignored files list?</summary>
-  A: You can add a `repo2pdf.ignore` file to the root of your repository to customize the list of ignored files. Here's an example of how to structure this file:
-
-```json
-{
-  "ignoredFiles": ["tsconfig.json"],
-  "ignoredExtensions": [".md"]
-}
+```bash
+repo2pdf convert https://github.com/username/repository \
+  --output repo.pdf \
+  --concurrency 10
 ```
 
-</details>
+Process only specific parts of the code:
 
-<details>
-  <summary>Q: How can I include line numbers in the generated PDF?</summary>
-  A: During the execution of the script, you'll be prompted with the question "Include line numbers?". Answering 'Y' will include line numbers in the generated PDF.
-</details>
+```bash
+repo2pdf convert https://github.com/username/repository \
+  --output repo.pdf \
+  --remove-comments \
+  --remove-empty-lines
+```
 
-<details>
-  <summary>Q: How can I keep the cloned repository after generating the PDF?</summary>
-  A: You'll be asked "Keep cloned repository?" during the script execution. Answer 'Y' to keep the cloned repository on your system after the PDF is generated.
-</details>
+## Development
 
-<details>
-  <summary>Q: How can I generate a PDF for a local repository?</summary>
-  A: When running the script, you'll be asked to either clone a repository or use a local one. Choose the latter and provide the local repository path.
-</details>
+### Building from Source
 
----
+```bash
+git clone https://github.com/BankkRoll/repo2pdf.git
+cd repo2pdf
+npm install
+npm run build
+```
 
-## Contributing to repo2pdf
+### Running Tests
 
-**Your insights, skills, and valuable time can make a huge difference in the evolution of repo2pdf!** We're always excited to see the community helping in shaping this tool to be even more efficient and feature-rich.
+```bash
+# Run all tests
+npm test
 
-### Reporting Bugs
+# Run unit tests
+npm run test:unit
 
-Encountered a hiccup? We're here to help! Please:
+# Run integration tests
+npm run test:integration
 
-1. Open an issue on GitHub detailing the bug.
-2. Describe the problem in depth. Share the steps to reproduce the issue and any error messages you received.
-3. If possible, provide information about your operating system and Node.js version.
+# Run with coverage
+npm run test:coverage
+```
 
-### Suggesting Enhancements
+### Contributing
 
-Have a brilliant idea for a new feature or an improvement to an existing one? We're all ears! Please:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Open an issue on GitHub to share your suggestions.
-2. Be as detailed as possible, explaining what you want to achieve and why it would be beneficial to the project.
-
-### Writing Code
-
-If you're up for rolling up your sleeves to contribute code to fix a bug or implement a new feature, here's how you can get started:
-
-1. Fork the repository.
-2. Create a new branch for your changes.
-3. Make your changes in your branch.
-4. Submit a pull request from your branch to the main repo2pdf repository.
-
-In your pull request, please provide a clear description of the changes you've made. We appreciate contributions that adhere to our coding conventions and are consistent with the existing codebase - it helps us maintain the quality of the project and makes the review process more efficient.
-
----
-
-### Meet Our Contributors
-
-We're ever grateful for the valuable contributions from our community. Meet the people who're helping shape repo2pdf:
-
-[![Contributors](https://contrib.rocks/image?repo=BankkRoll/repo2pdf)](https://github.com/BankkRoll/repo2pdf/graphs/contributors)
-
----
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-repo2pdf is open source software, licensed under the MIT License. See the `LICENSE` file for more information.
+This project is licensed under the MIT License - see the [LICENSE](/license) file for details.
 
-## Star History
+---
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=BankkRoll/repo2pdf&type=Date&theme=dark">
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=BankkRoll/repo2pdf&type=Date">
-</picture>
+## Technical Architecture Details
+
+### Repository Fetching
+
+The repository fetching system is built around the `RepositoryFetcher` interface, which defines methods for initializing, fetching, and validating repositories. Each implementation (GitHub, GitLab, Bitbucket, local) handles the specifics of its platform:
+
+- **GitHubFetcher**: Uses the Octokit REST client to interact with the GitHub API
+- **GitLabFetcher**: Uses the GitLab API v4 with pagination support
+- **BitbucketFetcher**: Uses the Bitbucket API v2 with recursive directory traversal
+- **LocalFetcher**: Reads from the local filesystem with .gitignore support
+
+Each fetcher converts the repository structure into a common `RepoFile` format that can be processed uniformly.
+
+### File Processing
+
+The file processing system is designed to handle different file types appropriately:
+
+- **CodeProcessor**: Uses Shiki for syntax highlighting with support for 25+ languages
+- **ImageProcessor**: Converts images to base64 for embedding in the output
+- **BinaryProcessor**: Extracts metadata for binary files
+
+The `FileProcessor` class orchestrates this process, applying filters and organizing files by directory.
+
+### Output Generation
+
+The output generation system starts with HTML as the base format:
+
+- **HTMLGenerator**: Creates a structured HTML document with syntax highlighting
+- **PDFGenerator**: Uses Puppeteer to convert HTML to PDF with customizable page settings
+- **EPUBGenerator**: Creates EPUB files for e-readers
+- **MOBIGenerator**: Creates MOBI files for Kindle, using Calibre if available
+
+### Parallel Processing
+
+The `ParallelProcessor` utility enables efficient processing of large repositories by:
+
+- Limiting concurrent operations to prevent memory issues
+- Providing progress tracking
+- Handling errors gracefully
+- Supporting early termination
+
+### Error Handling
+
+The error handling system uses custom error types for different scenarios:
+
+- **ConfigurationError**: Issues with user configuration
+- **RepositoryError**: Problems accessing or parsing repositories
+- **FileProcessingError**: Issues during file processing
+- **GenerationError**: Problems generating output files
+- **NetworkError**: Network connectivity issues
+- **AuthenticationError**: Authentication failures
+- **PermissionError**: Permission-related issues
+- **TimeoutError**: Operation timeouts
+
+Each error includes context and, when available, the original error for debugging.
+
+### Testing
+
+The testing strategy includes:
+
+- **Unit Tests**: Testing individual components in isolation
+- **Integration Tests**: Testing the interaction between components
+- **End-to-End Tests**: Testing the complete workflow
+
+Tests use Jest with mocking for external dependencies.
+
+### File Directory
+
+```
+repo2pdf/
+├── .env                         # Environment variables file (ignored in production)
+├── .env.example                 # Example environment variables file for reference
+├── package-lock.json            # Lock file for npm dependencies
+├── package.json                 # Project metadata and dependencies
+├── README.md                    # Project documentation
+├── tsconfig.json                 # TypeScript configuration file
+│
+├── bin/                         # Executable scripts
+│   └── repo2pdf.js              # CLI entry point for generating PDFs
+│
+├── examples/                    # Example plugins for extending functionality
+│   └── plugins/
+│       ├── syntax-highlighter/
+│       │   ├── index.ts         # Example syntax highlighting plugin
+│       │   └── package.json     # Plugin-specific dependencies
+│       └── theme-customizer/
+│           ├── index.ts         # Example theme customization plugin
+│           └── package.json     # Plugin-specific dependencies
+│
+├── src/                         # Source code directory
+│   ├── cli.ts                   # Command-line interface
+│   ├── index.ts                 # Main entry point and API
+│   │
+│   ├── config/                   # Configuration-related modules
+│   │   ├── config-loader.ts      # Loads project configuration
+│   │   └── default-config.ts     # Default configuration settings
+│   │
+│   ├── fetchers/                 # Fetchers for different repository sources
+│   │   ├── fetcher.interface.ts  # Interface for repository fetchers
+│   │   ├── github-fetcher.ts     # GitHub repository fetcher
+│   │   ├── gitlab-fetcher.ts     # GitLab repository fetcher
+│   │   ├── bitbucket-fetcher.ts  # Bitbucket repository fetcher
+│   │   └── local-fetcher.ts      # Fetcher for local repositories
+│   │
+│   ├── generators/               # Content generation modules
+│   │   ├── html-generator.ts     # HTML output generator
+│   │   ├── pdf-generator.ts      # PDF output generator
+│   │   ├── epub-generator.ts     # EPUB output generator
+│   │   └── mobi-generator.ts     # MOBI output generator
+│   │
+│   ├── plugins/                  # Plugin system for extending functionality
+│   │   ├── plugin-loader.ts      # Loads plugins dynamically
+│   │   ├── plugin-manager.ts     # Manages plugin lifecycle
+│   │   └── plugin.interface.ts   # Interface for plugin development
+│   │
+│   ├── processors/               # Processing modules for different file types
+│   │   ├── file-processor.ts     # Processes general files
+│   │   ├── code-processor.ts     # Processes code files
+│   │   ├── image-processor.ts    # Processes image files
+│   │   └── binary-processor.ts   # Processes binary files
+│   │
+│   ├── types/                    # TypeScript type definitions
+│   │   ├── config.types.ts       # Types for configuration
+│   │   ├── file.types.ts         # Types for files
+│   │   └── output.types.ts       # Types for output formats
+│   │
+│   └── utils/                    # Utility modules
+│       ├── cache-manager.ts      # Manages caching to optimize performance
+│       ├── error-handler.ts      # Handles errors and exceptions
+│       ├── file-utils.ts         # File manipulation utilities
+│       ├── incremental-processor.ts # Processes files incrementally
+│       ├── logger.ts             # Logging utility
+│       ├── parallel-processor.ts # Handles parallel processing tasks
+│       ├── retry-handler.ts      # Retries failed network operations
+│       └── secure-token-manager.ts # Manages secure authentication tokens
+│
+└── tests/                        # Testing directory
+```
+
+---
+
+Created with ❤️ by BankkRoll
