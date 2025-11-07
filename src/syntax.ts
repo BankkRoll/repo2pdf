@@ -40,39 +40,43 @@ export function htmlToJson(
     ["code", "#7F8C8D"], // Gray
   ]);
 
-  const elementRegex =
-    /<span\s+class="hljs-([^"]+)"[^>]*>([^<]*)(?:<\/span>)?/g;
-  const nonelementRegex = /[^<]+|<\/span>|\n/g;
+  // Minimal tag/text scanner with a color stack
+  const stack: (string | undefined)[] = [];
+  const getColorFromClasses = (cls?: string) => {
+    if (!cls) return undefined;
+    const m = /\bhljs-([^\s"]+)/.exec(cls);
+    if (!m) return undefined;
+    return colorMap.get(m[1].toLowerCase());
+  };
 
-  let match;
-  while ((match = elementRegex.exec(htmlCode)) !== null) {
-    const [_, cls, text] = match;
-    const color = colorMap.get(cls.split(" ")[0].toLowerCase()) || "black";
-    data.push({ text: decode(text), color });
-  }
+  // Matches: opening <span ...>, closing </span>, or plain text chunks
+  const re = /<\s*span\b([^>]*)>|<\/\s*span\s*>|([^<]+)/g;
+  let m: RegExpExecArray | null;
 
-  htmlCode = htmlCode.replace(elementRegex, "");
+  while ((m = re.exec(htmlCode)) !== null) {
+    if (m[1] !== undefined) {
+      // Opening span: push color (if any)
+      const attrs = m[1];
+      const cls = /\bclass\s*=\s*"([^"]*)"/.exec(attrs)?.[1];
+      stack.push(getColorFromClasses(cls));
+    } else if (m[0].startsWith("</")) {
+      // Closing span: pop color
+      stack.pop();
+    } else if (m[2] !== undefined) {
+      // Text node
+      const text = decode(m[2]);
+      const parts = text.split("\n");
 
-  while ((match = nonelementRegex.exec(htmlCode)) !== null) {
-    const text = match[0];
-    data.push({ text: text === "\n" ? text : decode(text) });
-  }
+      for (let i = 0; i < parts.length; i++) {
+        const line = parts[i];
+        if (removeEmptyLines && line.trim() === "") continue;
+        if (i > 0) data.push({ text: "\n" });
 
-  const fixedData: { text: string; color?: string }[] = [];
-  for (const { text, color } of data) {
-    const lines = text.split("\n");
-    for (let j = 0; j < lines.length; j++) {
-      const line = lines[j];
-
-      // Conditionally skip lines that only contain whitespace
-      if (removeEmptyLines && line.trim() === "") {
-        continue;
+        const color = stack.length ? stack[stack.length - 1] : undefined;
+        data.push({ text: line, color });
       }
-
-      if (j > 0) fixedData.push({ text: "\n" });
-      fixedData.push({ text: line, color });
     }
   }
 
-  return fixedData;
+  return data;
 }
