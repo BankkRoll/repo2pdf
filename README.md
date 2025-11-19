@@ -226,7 +226,7 @@ The npm publish workflow only runs for semantic version tags (`v*.*.*`) or when 
    git push origin v2.3.0
    ```
 3. Pushing the tag automatically triggers the `Publish Package` GitHub Action, which builds and publishes to npm if the tag matches `package.json`.
-4. If you need to re-run the publish step without pushing a new tag, use **Run workflow** in the Actions tab, select *Publish Package*, and supply the tag name (e.g., `v2.3.0`) as the `release_tag` input.
+4. If you need to re-run the publish step without pushing a new tag, use **Run workflow** in the Actions tab, select _Publish Package_, and supply the tag name (e.g., `v2.3.0`) as the `release_tag` input.
 
 > Tags are required—pushing to `main` alone will not publish a new version.
 
