@@ -215,6 +215,21 @@ If you're up for rolling up your sleeves to contribute code to fix a bug or impl
 
 In your pull request, please provide a clear description of the changes you've made. We appreciate contributions that adhere to our coding conventions and are consistent with the existing codebase - it helps us maintain the quality of the project and makes the review process more efficient.
 
+### Publishing Releases
+
+The npm publish workflow only runs for semantic version tags (`v*.*.*`) or when manually dispatched. To cut a release:
+
+1. Update the version in `package.json` (and `package-lock.json`) and commit the changes on the default branch.
+2. Create a new git tag that matches the version, e.g.:
+   ```bash
+   git tag v2.3.0
+   git push origin v2.3.0
+   ```
+3. Pushing the tag automatically triggers the `Publish Package` GitHub Action, which builds and publishes to npm if the tag matches `package.json`.
+4. If you need to re-run the publish step without pushing a new tag, use **Run workflow** in the Actions tab, select *Publish Package*, and supply the tag name (e.g., `v2.3.0`) as the `release_tag` input.
+
+> Tags are required—pushing to `main` alone will not publish a new version.
+
 ---
 
 ### Meet Our Contributors
