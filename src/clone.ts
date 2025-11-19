@@ -130,6 +130,7 @@ async function main(
 
     if (!onePdfPerFile) {
       if (doc) {
+        doc.text("", { continued: false }); // ensure text flow is closed before adding page numbers
         const pages = doc.bufferedPageRange();
         for (let i = 0; i < pages.count; i++) {
           doc.switchToPage(i);
