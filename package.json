@@ -11,6 +11,7 @@
     "LICENSE.md",
     "README.md",
     "package.json",
+    "package-lock.json",
     "repo2pdf.ignore",
     "tsconfig.json"
   ],
