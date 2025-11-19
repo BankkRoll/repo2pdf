@@ -39,7 +39,7 @@ jobs:
             echo "::error::Unable to determine package version"
             exit 1
           fi
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          LATEST_TAG=$(git tag --sort=-version:refname -l "v*.*.*" | head -n1)
           if [ -z "$LATEST_TAG" ]; then
             echo "No tags found. Skipping version comparison."
             exit 0
