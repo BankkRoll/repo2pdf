@@ -1,0 +1,55 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Version tag to publish (e.g., v2.3.0)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the package
+        run: npm run build
+
+      - name: Verify tag matches package version
+        run: |
+          if [ -z "${RELEASE_TAG}" ]; then
+            echo "Release tag is required." >&2
+            exit 1
+          fi
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ "v${PACKAGE_VERSION}" != "${RELEASE_TAG}" ]; then
+            echo "Version mismatch: package.json=${PACKAGE_VERSION}, tag=${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --access public

@@ -222,7 +222,7 @@ async function main(
         if (doc) {
           // fix new line number starting on previous line
           if (!onePdfPerFile && fileCount > 1) doc.text("\n");
-          
+
           if (isBinaryFileSync(filePath)) {
             const data = fs.readFileSync(filePath).toString("base64");
             if (fileCount > 1) doc.addPage();

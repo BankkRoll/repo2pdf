@@ -15,7 +15,7 @@
 
 repo2pdf is an innovative and versatile tool designed to seamlessly transform GitHub repositories into well-formatted, visually engaging, and easy-to-navigate PDF files. By automating the process of cloning repositories and parsing code files, repo2pdf serves a variety of use-cases including teaching, code reviews, offline referencing, archiving, AI training, and document embedding. The tool's flexibility expands the horizons of interacting with codebases by bridging the gap between the dynamic world of coding and the static, universally accessible format of PDFs, catering to a multitude of user needs and creative applications.
 
-- [repo2pdf](#repo2pdf)
+- [repo2pdf](#repo2pdf) - [NPM: https://www.npmjs.com/package/repo2pdf](#npm-httpswwwnpmjscompackagerepo2pdf) - [Website: https://repo2pdf.site](#website-httpsrepo2pdfsite)
   - [Installation and Usage](#installation-and-usage)
     - [Installing and Using repo2pdf with NPX](#installing-and-using-repo2pdf-with-npx)
     - [Installing and Using repo2pdf by Cloning the Repository](#installing-and-using-repo2pdf-by-cloning-the-repository)
@@ -26,7 +26,7 @@ repo2pdf is an innovative and versatile tool designed to seamlessly transform Gi
     - [Reporting Bugs](#reporting-bugs)
     - [Suggesting Enhancements](#suggesting-enhancements)
     - [Writing Code](#writing-code)
-  - [Meet Our Contributors](#meet-our-contributors)
+    - [Meet Our Contributors](#meet-our-contributors)
   - [License](#license)
   - [Star History](#star-history)
 
@@ -37,6 +37,7 @@ repo2pdf is an innovative and versatile tool designed to seamlessly transform Gi
 repo2pdf can be installed by either [directly using NPX](#installing-and-using-repo2pdf-with-npx) or [cloning the repository from GitHub](#installing-and-using-repo2pdf-by-cloning-the-repository). The steps and prompts vary based on the chosen method.
 
 > NEW! Use the webapp [here](https://repo2pdf.site)
+
 ---
 
 ### Installing and Using repo2pdf with NPX
