@@ -7,6 +7,12 @@
   "bin": {
     "repo2pdf": "bin/repo2pdf.js"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE.md"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
