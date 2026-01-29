@@ -2,16 +2,13 @@ import { BitbucketFetcher } from "./fetchers/bitbucket-fetcher";
 import { CacheManager } from "./utils/cache-manager";
 import type { Config } from "./types/config.types";
 import { ConfigLoader } from "./config/config-loader";
-import { EPUBGenerator } from "./generators/epub-generator";
 import { ErrorHandler } from "./utils/error-handler";
 import { FileProcessor } from "./processors/file-processor";
 import type { GenerationResult } from "./types/output.types";
 import { GitHubFetcher } from "./fetchers/github-fetcher";
 import { GitLabFetcher } from "./fetchers/gitlab-fetcher";
-import { HTMLGenerator } from "./generators/html-generator";
 import { IncrementalProcessor } from "./utils/incremental-processor";
 import { LocalFetcher } from "./fetchers/local-fetcher";
-import { MOBIGenerator } from "./generators/mobi-generator";
 import { PDFGenerator } from "./generators/pdf-generator";
 import type { RepositoryFetcher } from "./fetchers/fetcher.interface";
 import fs from "fs";
@@ -98,16 +95,8 @@ export class Repo2PDF {
 
       logger.info(`Processed ${processedFiles.length} files`);
 
-      // Generate HTML
-      logger.info("Generating HTML...");
-      const htmlGenerator = new HTMLGenerator(this.config);
-      const htmlContent = await htmlGenerator.generateHTML(
-        processedFiles,
-        repoInfo,
-      );
-
-      // Generate output based on format
-      const { format, outputPath } = this.config.output;
+      // Get output path
+      const { outputPath } = this.config.output;
 
       // Ensure output directory exists
       const outputDir = path.dirname(outputPath);
@@ -115,53 +104,15 @@ export class Repo2PDF {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      let result: GenerationResult;
-
-      switch (format) {
-        case "pdf":
-          logger.info("Generating PDF...");
-          const pdfGenerator = new PDFGenerator(this.config);
-          result = await pdfGenerator.generatePDF(htmlContent, outputPath);
-          await pdfGenerator.cleanup();
-          break;
-
-        case "html":
-          logger.info("Saving HTML...");
-          fs.writeFileSync(outputPath, htmlContent);
-          result = {
-            success: true,
-            outputPath,
-            format: "html",
-            fileSize: fs.statSync(outputPath).size,
-            generationTime: 0,
-          };
-          break;
-
-        case "epub":
-          logger.info("Generating EPUB...");
-          const epubGenerator = new EPUBGenerator(this.config);
-          result = await epubGenerator.generateEPUB(
-            processedFiles,
-            repoInfo,
-            outputPath,
-          );
-          break;
-
-        case "mobi":
-          logger.info("Generating MOBI...");
-          const mobiGenerator = new MOBIGenerator(this.config);
-          result = await mobiGenerator.generateMOBI(
-            processedFiles,
-            repoInfo,
-            outputPath,
-          );
-          break;
-
-        default:
-          throw ErrorHandler.configurationError(
-            `Unsupported output format: ${format}`,
-          );
-      }
+      // Generate PDF
+      logger.info("Generating PDF...");
+      const pdfGenerator = new PDFGenerator(this.config);
+      const result = await pdfGenerator.generatePDF(
+        processedFiles,
+        repoInfo,
+        outputPath,
+      );
+      await pdfGenerator.cleanup();
 
       // Clean up
       await this.cleanup();
@@ -171,7 +122,8 @@ export class Repo2PDF {
       // Clean up on error
       await this.cleanup();
 
-      logger.error("Error converting repository:", error);
+      // Only log full error in debug mode
+      logger.debug("Error converting repository:", error);
       throw error;
     }
   }
@@ -213,6 +165,16 @@ export * from "./types/config.types";
 export * from "./types/file.types";
 export * from "./types/output.types";
 
+// Export plugin system
+export { HookPoint, PluginManager } from "./plugins/plugin-manager";
+export type { PluginMetadata, Plugin } from "./plugins/plugin-manager";
+export { PluginLoader } from "./plugins/plugin-loader";
+export type { PluginLoaderOptions } from "./plugins/plugin-loader";
+export type {
+  IRepo2PDFPlugin,
+  GenerationOutput,
+} from "./plugins/plugin.interface";
+
 // Export utilities
 export { logger } from "./utils/logger";
 export { ErrorHandler } from "./utils/error-handler";
@@ -233,7 +195,7 @@ export async function convertRepository(
     // Convert repository
     return await repo2pdf.convert();
   } catch (error) {
-    logger.error("Error converting repository:", error);
+    logger.debug("Error converting repository:", error);
     throw error;
   }
 }

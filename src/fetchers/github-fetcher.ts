@@ -79,16 +79,42 @@ export class GitHubFetcher implements RepositoryFetcher {
       const isValid = await this.validateRepository();
       if (!isValid) {
         throw new Error(
-          `Repository ${this.owner}/${this.repo} is not accessible or does not exist`,
+          `Repository "${this.owner}/${this.repo}" not found or is private. Check the URL or provide a token with --token.`,
         );
       }
 
       // Get the root tree
-      const { data: refData } = await this.octokit.git.getRef({
-        owner: this.owner,
-        repo: this.repo,
-        ref: `heads/${this.branch}`,
-      });
+      let refData;
+      try {
+        const response = await this.octokit.git.getRef({
+          owner: this.owner,
+          repo: this.repo,
+          ref: `heads/${this.branch}`,
+        });
+        refData = response.data;
+      } catch (error: any) {
+        if (error.status === 404) {
+          // Try to get available branches
+          let branchHint = "";
+          try {
+            const { data: branches } = await this.octokit.repos.listBranches({
+              owner: this.owner,
+              repo: this.repo,
+              per_page: 5,
+            });
+            if (branches.length > 0) {
+              const branchNames = branches.map((b) => b.name).join(", ");
+              branchHint = ` Available branches: ${branchNames}`;
+            }
+          } catch {
+            // Ignore errors when fetching branches
+          }
+          throw new Error(
+            `Branch "${this.branch}" not found in ${this.owner}/${this.repo}.${branchHint}`,
+          );
+        }
+        throw error;
+      }
 
       const { data: commitData } = await this.octokit.git.getCommit({
         owner: this.owner,
@@ -115,20 +141,34 @@ export class GitHubFetcher implements RepositoryFetcher {
           }
 
           try {
-            const file = await this.fetchFile(item.path);
+            const file = await this.fetchFile(item.path!);
             files.push(file);
           } catch (error) {
-            logger.error(`Failed to fetch file ${item.path}:`, error);
+            logger.debug(`Failed to fetch file ${item.path}:`, error);
           }
         }),
       );
 
       await Promise.all(promises);
       return files;
-    } catch (error) {
-      logger.error("Error fetching repository structure:", error);
+    } catch (error: any) {
+      // Re-throw our custom errors as-is
+      if (error.message && !error.status) {
+        throw error;
+      }
+      // Handle API errors
+      if (error.status === 403 && error.message?.includes("rate limit")) {
+        const resetDate = new Date(this.rateLimitReset * 1000);
+        throw new Error(
+          `GitHub API rate limit exceeded. Resets at ${resetDate.toLocaleTimeString()}. Use --token for higher limits.`,
+        );
+      }
+      if (error.status === 401) {
+        throw new Error(`Authentication failed. Check your token is valid.`);
+      }
+      logger.debug("Error fetching repository structure:", error);
       throw new Error(
-        `Failed to fetch repository structure: ${(error as Error).message}`,
+        `Failed to fetch repository: ${error.message || "Unknown error"}`,
       );
     }
   }
@@ -168,7 +208,7 @@ export class GitHubFetcher implements RepositoryFetcher {
             const arrayBuffer = await response.arrayBuffer();
             content = Buffer.from(arrayBuffer);
           }
-        } else if (data.content) {
+        } else if ("content" in data && data.content) {
           // If content is already provided (base64 encoded)
           content = Buffer.from(data.content, "base64");
           if (fileType === "code") {

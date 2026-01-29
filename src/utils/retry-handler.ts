@@ -52,7 +52,7 @@ export class RetryHandler {
     options: Partial<RetryOptions> = {},
   ): Promise<T> {
     const retryOptions: RetryOptions = { ...defaultRetryOptions, ...options };
-    let lastError: Error;
+    let lastError: Error = new Error("No attempts made");
 
     for (let attempt = 1; attempt <= retryOptions.maxRetries + 1; attempt++) {
       try {

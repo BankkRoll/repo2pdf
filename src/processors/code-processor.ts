@@ -1,4 +1,8 @@
-import { getHighlighter, type Highlighter, type Lang } from "shiki";
+import {
+  createHighlighter,
+  type Highlighter,
+  type BundledLanguage,
+} from "shiki";
 import type { ProcessedFile, RepoFile } from "../types/file.types";
 import type { Config } from "../types/config.types";
 import { logger } from "../utils/logger";
@@ -68,8 +72,8 @@ export class CodeProcessor {
    * Initialize the Shiki highlighter
    */
   private initializeHighlighter(): void {
-    this.highlighterPromise = getHighlighter({
-      theme: this.config.style.theme,
+    this.highlighterPromise = createHighlighter({
+      themes: [this.config.style.theme || "github-dark"],
       langs: [
         "javascript",
         "typescript",
@@ -96,7 +100,8 @@ export class CodeProcessor {
         "graphql",
         "xml",
         "dockerfile",
-        "shell",
+        "shellscript",
+        "text",
       ],
     });
   }
@@ -112,18 +117,22 @@ export class CodeProcessor {
 
       // Map language to Shiki supported language
       const mappedLang = this.mapLanguage(language);
+      const theme = this.config.style.theme || "github-dark";
 
       // Highlight the code
-      const html = this.highlighter.codeToHtml(code, {
-        lang: mappedLang as Lang,
-        theme: this.config.style.theme,
-        lineOptions: this.config.style.lineNumbers
-          ? Array.from({ length: code.split("\n").length }, (_, i) => ({
-              line: i + 1,
-              classes: ["line-number"],
-            }))
-          : undefined,
+      let html = this.highlighter.codeToHtml(code, {
+        lang: mappedLang as BundledLanguage,
+        theme,
       });
+
+      // Remove background-color from inline styles (we set our own)
+      html = html.replace(/background-color:[^;"]+;?/g, "");
+
+      // Remove newlines between line spans (they cause gaps)
+      html = html.replace(
+        /<\/span>\n<span class="line">/g,
+        '</span><span class="line">',
+      );
 
       return html;
     } catch (error) {
@@ -131,10 +140,12 @@ export class CodeProcessor {
 
       // Fallback to plain text if highlighting fails
       if (this.highlighter) {
-        return this.highlighter.codeToHtml(code, {
+        let html = this.highlighter.codeToHtml(code, {
           lang: "text",
-          theme: this.config.style.theme,
+          theme: this.config.style.theme || "github-dark",
         });
+        html = html.replace(/background-color:[^;"]+;?/g, "");
+        return html;
       }
 
       // If highlighter is not available, return pre-formatted HTML
@@ -171,6 +182,7 @@ export class CodeProcessor {
       ini: "ini",
       properties: "ini",
       txt: "text",
+      svg: "xml",
     };
 
     return languageMap[language.toLowerCase()] || language;

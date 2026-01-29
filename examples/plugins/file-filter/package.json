@@ -1,7 +1,7 @@
 {
-  "name": "repo2pdf-plugin-syntax-highlighter",
+  "name": "repo2pdf-plugin-file-filter",
   "version": "1.0.0",
-  "description": "Syntax highlighting plugin for repo2pdf using highlight.js",
+  "description": "File filtering plugin for repo2pdf - selectively include/exclude files",
   "main": "index.js",
   "types": "index.d.ts",
   "author": "repo2pdf Team",
@@ -9,15 +9,14 @@
   "keywords": [
     "repo2pdf",
     "plugin",
-    "syntax-highlighting",
-    "highlight.js"
+    "filter",
+    "exclude",
+    "include",
+    "glob"
   ],
   "repo2pdfHooks": [
-    "transformContent"
+    "filterFile"
   ],
-  "dependencies": {
-    "highlight.js": "^11.9.0"
-  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
@@ -31,6 +30,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/anthropics/repo2pdf",
-    "directory": "examples/plugins/syntax-highlighter"
+    "directory": "examples/plugins/file-filter"
   }
 }

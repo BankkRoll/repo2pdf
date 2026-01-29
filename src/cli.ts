@@ -1,588 +1,491 @@
 #!/usr/bin/env node
 
-import type { OutputFormat, VCSType } from "./types/config.types";
-
 import { CacheManager } from "./utils/cache-manager";
 import { Command } from "commander";
 import { ConfigLoader } from "./config/config-loader";
-import { ErrorHandler } from "./utils/error-handler";
 import { Repo2PDF } from "./index";
-import chalk from "chalk";
+import type { VCSType } from "./types/config.types";
 import fs from "fs";
 import inquirer from "inquirer";
 import { logger } from "./utils/logger";
 import ora from "ora";
 import path from "path";
 
-/**
- * Command-line interface for repo2pdf
- */
-const program = new Command();
+// ============================================
+// Colors & Styling
+// ============================================
 
-// Set up CLI
-program
-  .name("repo2pdf")
-  .description("Convert a repository to PDF, HTML, EPUB, or MOBI")
-  .version("2.0.0");
+const RESET = "\x1b[0m";
+const BOLD = "\x1b[1m";
+const DIM = "\x1b[38;5;102m";
+const TEXT = "\x1b[38;5;145m";
+const SUCCESS = "\x1b[38;5;114m";
+const WARNING = "\x1b[38;5;221m";
+const ERROR = "\x1b[38;5;203m";
 
-// Add commands
-program
-  .command("convert")
-  .description("Convert a repository to the specified format")
-  .argument("<repository>", "Repository URL or local path")
-  .option("-o, --output <path>", "Output file path")
-  .option(
-    "-f, --format <format>",
-    "Output format (pdf, html, epub, mobi)",
-    "pdf",
-  )
-  .option("-b, --branch <branch>", "Repository branch")
-  .option(
-    "-t, --token <token>",
-    "GitHub/GitLab/Bitbucket token for private repositories",
-  )
-  .option(
-    "-s, --single-file",
-    "Generate a single file for all repository files",
-    true,
-  )
-  .option("--theme <theme>", "Syntax highlighting theme")
-  .option("--no-line-numbers", "Disable line numbers")
-  .option("--no-page-numbers", "Disable page numbers")
-  .option("--no-toc", "Disable table of contents")
-  .option("--ignore <patterns...>", "Patterns to ignore (glob format)")
-  .option("--include-binary", "Include binary files", false)
-  .option("--include-hidden", "Include hidden files", false)
-  .option("--remove-comments", "Remove comments from code", false)
-  .option("--remove-empty-lines", "Remove empty lines from code", false)
-  .option("--concurrency <number>", "Maximum concurrent operations", "5")
-  .option("--no-cache", "Disable caching", false)
-  .option("--clear-cache", "Clear cache before running", false)
-  .option(
-    "--incremental",
-    "Use incremental processing for large repositories",
-    true,
-  )
-  .option(
-    "--chunk-size <number>",
-    "Chunk size for incremental processing",
-    "100",
-  )
-  .option("--debug", "Enable debug mode", false)
-  .option("--interactive", "Run in interactive mode", false)
-  .action(async (repository, options) => {
-    try {
-      // Set debug mode
-      logger.setDebugMode(options.debug);
+// Gradient grays for logo
+const GRAYS = [
+  "\x1b[38;5;250m",
+  "\x1b[38;5;248m",
+  "\x1b[38;5;245m",
+  "\x1b[38;5;243m",
+  "\x1b[38;5;240m",
+  "\x1b[38;5;238m",
+];
 
-      // Handle cache clearing if requested
-      if (options.clearCache) {
-        const cacheManager = CacheManager.getInstance();
-        cacheManager.clearAllCache();
-      }
+const LOGO_LINES = [
+  "██████╗ ███████╗██████╗  ██████╗ ██████╗ ██████╗ ██████╗ ███████╗",
+  "██╔══██╗██╔════╝██╔══██╗██╔═══██╗╚════██╗██╔══██╗██╔══██╗██╔════╝",
+  "██████╔╝█████╗  ██████╔╝██║   ██║ █████╔╝██████╔╝██║  ██║█████╗  ",
+  "██╔══██╗██╔══╝  ██╔═══╝ ██║   ██║██╔═══╝ ██╔═══╝ ██║  ██║██╔══╝  ",
+  "██║  ██║███████╗██║     ╚██████╔╝███████╗██║     ██████╔╝██║     ",
+  "╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝ ╚══════╝╚═╝     ╚═════╝ ╚═╝     ",
+];
 
-      // Parse repository URL or local path
-      const repoPath = repository;
-      let vcsType: VCSType = "github";
-      let localPath: string | undefined;
+// ============================================
+// Version
+// ============================================
 
-      if (repoPath.startsWith("http")) {
-        // Determine VCS type from URL
-        if (repoPath.includes("github.com")) {
-          vcsType = "github";
-        } else if (repoPath.includes("gitlab.com")) {
-          vcsType = "gitlab";
-        } else if (repoPath.includes("bitbucket.org")) {
-          vcsType = "bitbucket";
-        } else {
-          throw ErrorHandler.configurationError(
-            `Unsupported repository URL: ${repoPath}`,
-          );
-        }
-      } else {
-        // Local path
-        vcsType = "local";
-        localPath = path.resolve(repoPath);
-
-        if (!fs.existsSync(localPath)) {
-          throw ErrorHandler.configurationError(
-            `Local path does not exist: ${localPath}`,
-          );
-        }
-      }
-
-      // Interactive mode
-      if (options.interactive) {
-        await runInteractiveMode(repoPath, vcsType, localPath, options);
-        return;
-      }
-
-      // Determine output path
-      let outputPath = options.output;
-      if (!outputPath) {
-        const repoName = repoPath.endsWith("/")
-          ? path.basename(repoPath.slice(0, -1))
-          : path.basename(repoPath);
-
-        outputPath = `./${repoName}.${options.format}`;
-      }
-
-      // Create configuration
-      const configLoader = ConfigLoader.getInstance();
-      const config = await configLoader.loadConfig({
-        repository: {
-          url: vcsType !== "local" ? repoPath : "",
-          branch: options.branch,
-          token: options.token,
-          vcsType,
-          localPath,
-          useCache: options.cache,
-        },
-        output: {
-          format: options.format as OutputFormat,
-          outputPath,
-          singleFile: options.singleFile,
-        },
-        style: {
-          theme: options.theme || "github",
-          lineNumbers: options.lineNumbers,
-          pageNumbers: options.pageNumbers,
-          includeTableOfContents: options.toc,
-        },
-        processing: {
-          ignorePatterns: options.ignore || [],
-          maxConcurrency: Number.parseInt(options.concurrency, 10),
-          removeComments: options.removeComments,
-          removeEmptyLines: options.removeEmptyLines,
-          includeBinaryFiles: options.includeBinary,
-          includeHiddenFiles: options.includeHidden,
-          useIncrementalProcessing: options.incremental,
-          incrementalChunkSize: Number.parseInt(options.chunkSize, 10),
-        },
-        cache: {
-          enabled: options.cache,
-          ttl: 86400000, // 24 hours
-        },
-        debug: options.debug,
-      });
-
-      // Run conversion
-      const spinner = ora("Converting repository...").start();
-
-      const repo2pdf = new Repo2PDF(config);
-      const result = await repo2pdf.convert();
-
-      spinner.succeed(
-        `Repository converted successfully to ${result.outputPath}`,
-      );
-      console.log(chalk.green(`Output: ${result.outputPath}`));
-      console.log(chalk.gray(`Size: ${formatFileSize(result.fileSize)}`));
-      console.log(
-        chalk.gray(`Time: ${(result.generationTime / 1000).toFixed(2)}s`),
-      );
-    } catch (error) {
-      ErrorHandler.handle(error as Error, "CLI");
-    }
-  });
-
-// Add cache management commands
-program
-  .command("cache")
-  .description("Manage repository cache")
-  .option("--clear", "Clear all cache")
-  .option("--stats", "Show cache statistics")
-  .option("--repo <url>", "Repository URL for specific cache operations")
-  .option(
-    "--branch <branch>",
-    "Repository branch for specific cache operations",
-  )
-  .action(async (options) => {
-    try {
-      const cacheManager = CacheManager.getInstance();
-
-      if (options.clear) {
-        if (options.repo) {
-          cacheManager.clearCache(options.repo, options.branch || "main");
-          console.log(
-            chalk.green(
-              `Cleared cache for ${options.repo}#${options.branch || "main"}`,
-            ),
-          );
-        } else {
-          cacheManager.clearAllCache();
-          console.log(chalk.green("Cleared all cache"));
-        }
-      } else if (options.stats) {
-        const stats = cacheManager.getCacheStats();
-        console.log(chalk.blue("Cache Statistics:"));
-        console.log(chalk.gray(`Enabled: ${stats.enabled}`));
-        console.log(chalk.gray(`Cache Directory: ${stats.cacheDir}`));
-        console.log(chalk.gray(`TTL: ${stats.ttl / (60 * 60 * 1000)} hours`));
-        console.log(chalk.gray(`Cache Count: ${stats.cacheCount}`));
-        console.log(
-          chalk.gray(`Total Size: ${formatFileSize(stats.totalSize)}`),
-        );
-
-        if (stats.repositories.length > 0) {
-          console.log(chalk.blue("\nCached Repositories:"));
-          stats.repositories.forEach((repo) => {
-            console.log(chalk.gray(`- ${repo.url}#${repo.branch}`));
-            console.log(chalk.gray(`  Files: ${repo.fileCount}`));
-            console.log(
-              chalk.gray(
-                `  Cached: ${new Date(repo.timestamp).toLocaleString()}`,
-              ),
-            );
-          });
-        }
-      } else {
-        console.log(
-          chalk.yellow("No cache operation specified. Use --clear or --stats."),
-        );
-      }
-    } catch (error) {
-      ErrorHandler.handle(error as Error, "Cache");
-    }
-  });
-
-// Add benchmark command
-program
-  .command("benchmark")
-  .description("Run performance benchmarks")
-  .option("--repo <url>", "Repository URL to benchmark")
-  .option("--iterations <number>", "Number of benchmark iterations", "3")
-  .option("--format <format>", "Output format to benchmark", "pdf")
-  .option("--cache", "Use cache for benchmarks", false)
-  .action(async (options) => {
-    try {
-      if (!options.repo) {
-        console.log(
-          chalk.yellow(
-            "Repository URL is required for benchmarking. Use --repo <url>.",
-          ),
-        );
-        return;
-      }
-
-      const iterations = Number.parseInt(options.iterations, 10);
-      const format = options.format as OutputFormat;
-      const useCache = options.cache;
-
-      console.log(chalk.blue(`Running benchmark on ${options.repo}`));
-      console.log(chalk.gray(`Format: ${format}`));
-      console.log(chalk.gray(`Iterations: ${iterations}`));
-      console.log(chalk.gray(`Cache: ${useCache ? "enabled" : "disabled"}`));
-
-      const results = [];
-
-      for (let i = 0; i < iterations; i++) {
-        console.log(chalk.blue(`\nIteration ${i + 1}/${iterations}`));
-
-        // Clear cache if not using it
-        if (!useCache) {
-          const cacheManager = CacheManager.getInstance();
-          cacheManager.clearCache(options.repo, "main");
-        }
-
-        const configLoader = ConfigLoader.getInstance();
-        const config = await configLoader.loadConfig({
-          repository: {
-            url: options.repo,
-            vcsType: "github",
-            useCache,
-          },
-          output: {
-            format,
-            outputPath: `./benchmark-${i + 1}.${format}`,
-            singleFile: true,
-          },
-          cache: {
-            enabled: useCache,
-          },
-        });
-
-        const startTime = Date.now();
-        const spinner = ora("Running benchmark...").start();
-
-        const repo2pdf = new Repo2PDF(config);
-        const result = await repo2pdf.convert();
-
-        const endTime = Date.now();
-        const totalTime = endTime - startTime;
-
-        spinner.succeed(
-          `Benchmark completed in ${(totalTime / 1000).toFixed(2)}s`,
-        );
-
-        results.push({
-          iteration: i + 1,
-          time: totalTime,
-          fileSize: result.fileSize,
-        });
-      }
-
-      // Calculate statistics
-      const times = results.map((r) => r.time);
-      const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
-      const minTime = Math.min(...times);
-      const maxTime = Math.max(...times);
-
-      console.log(chalk.blue("\nBenchmark Results:"));
-      console.log(chalk.gray(`Average Time: ${(avgTime / 1000).toFixed(2)}s`));
-      console.log(chalk.gray(`Minimum Time: ${(minTime / 1000).toFixed(2)}s`));
-      console.log(chalk.gray(`Maximum Time: ${(maxTime / 1000).toFixed(2)}s`));
-      console.log(
-        chalk.gray(`Standard Deviation: ${calculateStdDev(times) / 1000}s`),
-      );
-
-      console.log(chalk.blue("\nDetailed Results:"));
-      results.forEach((r) => {
-        console.log(
-          chalk.gray(
-            `Iteration ${r.iteration}: ${(r.time / 1000).toFixed(2)}s, ${formatFileSize(r.fileSize)}`,
-          ),
-        );
-      });
-    } catch (error) {
-      ErrorHandler.handle(error as Error, "Benchmark");
-    }
-  });
-
-/**
- * Run interactive mode
- */
-async function runInteractiveMode(
-  repoPath: string,
-  vcsType: VCSType,
-  localPath: string | undefined,
-  cliOptions: any,
-): Promise<void> {
+function getVersion(): string {
   try {
-    console.log(chalk.blue("Running in interactive mode"));
+    const pkgPath = path.join(__dirname, "..", "package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    return pkg.version;
+  } catch {
+    return "3.0.0";
+  }
+}
 
-    // Ask for repository details
-    const repoAnswers = await inquirer.prompt([
-      {
-        type: "input",
-        name: "repository",
-        message: "Repository URL or local path:",
-        default: repoPath,
-      },
-      {
-        type: "list",
-        name: "vcsType",
-        message: "Repository type:",
-        choices: [
-          { name: "GitHub", value: "github" },
-          { name: "GitLab", value: "gitlab" },
-          { name: "Bitbucket", value: "bitbucket" },
-          { name: "Local", value: "local" },
-        ],
-        default: vcsType,
-      },
-      {
-        type: "input",
-        name: "branch",
-        message: "Branch:",
-        default: cliOptions.branch || "main",
-        when: (answers) => answers.vcsType !== "local",
-      },
-      {
-        type: "password",
-        name: "token",
-        message: "Access token (for private repositories):",
-        default: cliOptions.token,
-        when: (answers) => answers.vcsType !== "local",
-      },
-    ]);
+const VERSION = getVersion();
 
-    // Ask for output options
-    const outputAnswers = await inquirer.prompt([
-      {
-        type: "list",
-        name: "format",
-        message: "Output format:",
-        choices: [
-          { name: "PDF", value: "pdf" },
-          { name: "HTML", value: "html" },
-          { name: "EPUB", value: "epub" },
-          { name: "MOBI", value: "mobi" },
-        ],
-        default: cliOptions.format || "pdf",
-      },
-      {
-        type: "input",
-        name: "outputPath",
-        message: "Output path:",
-        default:
-          cliOptions.output ||
-          `./${path.basename(repoAnswers.repository)}.${cliOptions.format || "pdf"}`,
-      },
-      {
-        type: "confirm",
-        name: "singleFile",
-        message: "Generate a single file for all repository files?",
-        default:
-          cliOptions.singleFile !== undefined ? cliOptions.singleFile : true,
-      },
-    ]);
+// ============================================
+// UI Helpers
+// ============================================
 
-    // Ask for style options
-    const styleAnswers = await inquirer.prompt([
-      {
-        type: "list",
-        name: "theme",
-        message: "Syntax highlighting theme:",
-        choices: [
-          "github",
-          "github-dark",
-          "monokai",
-          "dracula",
-          "solarized-light",
-          "solarized-dark",
-          "nord",
-          "one-dark",
-          "one-light",
-        ],
-        default: cliOptions.theme || "github",
-      },
-      {
-        type: "confirm",
-        name: "lineNumbers",
-        message: "Include line numbers?",
-        default:
-          cliOptions.lineNumbers !== undefined ? cliOptions.lineNumbers : true,
-      },
-      {
-        type: "confirm",
-        name: "pageNumbers",
-        message: "Include page numbers?",
-        default:
-          cliOptions.pageNumbers !== undefined ? cliOptions.pageNumbers : true,
-        when: (answers) => outputAnswers.format === "pdf",
-      },
-      {
-        type: "confirm",
-        name: "includeTableOfContents",
-        message: "Include table of contents?",
-        default: cliOptions.toc !== undefined ? cliOptions.toc : true,
-      },
-    ]);
+function showLogo(): void {
+  console.log();
+  LOGO_LINES.forEach((line, i) => {
+    console.log(`${GRAYS[i]}${line}${RESET}`);
+  });
+}
 
-    // Ask for processing options
-    const processingAnswers = await inquirer.prompt([
-      {
-        type: "input",
-        name: "ignorePatterns",
-        message: "Patterns to ignore (comma-separated):",
-        default: (cliOptions.ignore || []).join(","),
-        filter: (input) =>
-          input
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-      },
-      {
-        type: "confirm",
-        name: "includeBinaryFiles",
-        message: "Include binary files?",
-        default:
-          cliOptions.includeBinary !== undefined
-            ? cliOptions.includeBinary
-            : false,
-      },
-      {
-        type: "confirm",
-        name: "includeHiddenFiles",
-        message: "Include hidden files?",
-        default:
-          cliOptions.includeHidden !== undefined
-            ? cliOptions.includeHidden
-            : false,
-      },
-      {
-        type: "confirm",
-        name: "removeComments",
-        message: "Remove comments from code?",
-        default:
-          cliOptions.removeComments !== undefined
-            ? cliOptions.removeComments
-            : false,
-      },
-      {
-        type: "confirm",
-        name: "removeEmptyLines",
-        message: "Remove empty lines from code?",
-        default:
-          cliOptions.removeEmptyLines !== undefined
-            ? cliOptions.removeEmptyLines
-            : false,
-      },
-      {
-        type: "input",
-        name: "maxConcurrency",
-        message: "Maximum concurrent operations:",
-        default: cliOptions.concurrency || "5",
-        validate: (input) =>
-          !isNaN(Number.parseInt(input, 10)) ? true : "Please enter a number",
-      },
-      {
-        type: "confirm",
-        name: "useCache",
-        message: "Use cache?",
-        default: cliOptions.cache !== undefined ? cliOptions.cache : true,
-      },
-      {
-        type: "confirm",
-        name: "useIncrementalProcessing",
-        message: "Use incremental processing for large repositories?",
-        default:
-          cliOptions.incremental !== undefined ? cliOptions.incremental : true,
-      },
-    ]);
+function showBanner(): void {
+  showLogo();
+  console.log();
+  console.log(`${DIM}Convert any repository to a beautiful PDF${RESET}`);
+  console.log();
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}repo2pdf convert ${DIM}<repo>${RESET}     ${DIM}Convert a repository${RESET}`,
+  );
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}repo2pdf interactive${RESET}        ${DIM}Interactive mode${RESET}`,
+  );
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}repo2pdf cache --stats${RESET}      ${DIM}View cache statistics${RESET}`,
+  );
+  console.log(
+    `  ${DIM}$${RESET} ${TEXT}repo2pdf cache --clear${RESET}      ${DIM}Clear the cache${RESET}`,
+  );
+  console.log();
+  console.log(
+    `${DIM}try:${RESET} repo2pdf convert https://github.com/BankkRoll/repo2pdf`,
+  );
+  console.log();
+  console.log(`${DIM}v${VERSION}${RESET}`);
+  console.log();
+}
+
+function showHelp(): void {
+  console.log(`
+${BOLD}Usage:${RESET} repo2pdf <command> [options]
+
+${BOLD}Commands:${RESET}
+  convert <repo>      Convert a repository to PDF
+                      Supports: GitHub, GitLab, Bitbucket, local paths
+  interactive, -i     Run in interactive mode with guided prompts
+  cache               Manage the repository cache
+
+${BOLD}Convert Options:${RESET}
+  -o, --output <path>       Output file path (default: ./<repo-name>.pdf)
+  -b, --branch <branch>     Repository branch (default: main)
+  -t, --token <token>       Auth token for private repositories
+  --theme <theme>           Syntax theme (github, github-dark, monokai, dracula, nord)
+  --no-line-numbers         Disable line numbers
+  --no-page-numbers         Disable page numbers
+  --no-toc                  Disable table of contents
+  --ignore <patterns...>    Glob patterns to ignore
+  --include-binary          Include binary files
+  --include-hidden          Include hidden files
+  --remove-comments         Remove code comments
+  --remove-empty-lines      Remove empty lines
+  --concurrency <n>         Max concurrent operations (default: 5)
+  --no-cache                Disable caching
+  --debug                   Enable debug output
+
+${BOLD}Cache Options:${RESET}
+  --clear                   Clear all cached data
+  --stats                   Show cache statistics
+  --repo <url>              Target specific repository
+
+${BOLD}Examples:${RESET}
+  ${DIM}$${RESET} repo2pdf convert https://github.com/user/repo
+  ${DIM}$${RESET} repo2pdf convert ./local-project -o docs.pdf
+  ${DIM}$${RESET} repo2pdf convert user/repo --theme github-dark
+  ${DIM}$${RESET} repo2pdf convert user/repo --ignore "*.test.ts" "node_modules/**"
+  ${DIM}$${RESET} repo2pdf interactive
+  ${DIM}$${RESET} repo2pdf cache --stats
+  ${DIM}$${RESET} repo2pdf cache --clear
+
+${BOLD}Supported Sources:${RESET}
+  ${TEXT}GitHub${RESET}      https://github.com/owner/repo
+  ${TEXT}GitLab${RESET}      https://gitlab.com/owner/repo
+  ${TEXT}Bitbucket${RESET}   https://bitbucket.org/owner/repo
+  ${TEXT}Local${RESET}       ./path/to/directory or /absolute/path
+
+${DIM}v${VERSION}${RESET}
+`);
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = (seconds % 60).toFixed(0);
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+// ============================================
+// Repository Detection
+// ============================================
+
+interface RepoInfo {
+  vcsType: VCSType;
+  url: string;
+  localPath?: string;
+  name: string;
+}
+
+function parseRepository(input: string): RepoInfo {
+  // GitHub shorthand: user/repo
+  if (/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/.test(input)) {
+    const name = input.split("/")[1];
+    return {
+      vcsType: "github",
+      url: `https://github.com/${input}`,
+      name,
+    };
+  }
+
+  // Full URLs
+  if (input.startsWith("http://") || input.startsWith("https://")) {
+    if (input.includes("github.com")) {
+      const match = input.match(/github\.com\/([^/]+)\/([^/]+)/);
+      const name = match ? match[2].replace(/\.git$/, "") : "repository";
+      return { vcsType: "github", url: input, name };
+    }
+    if (input.includes("gitlab.com")) {
+      const match = input.match(/gitlab\.com\/([^/]+)\/([^/]+)/);
+      const name = match ? match[2].replace(/\.git$/, "") : "repository";
+      return { vcsType: "gitlab", url: input, name };
+    }
+    if (input.includes("bitbucket.org")) {
+      const match = input.match(/bitbucket\.org\/([^/]+)\/([^/]+)/);
+      const name = match ? match[2].replace(/\.git$/, "") : "repository";
+      return { vcsType: "bitbucket", url: input, name };
+    }
+    throw new Error(`Unsupported repository URL: ${input}`);
+  }
+
+  // Local path
+  const resolvedPath = path.resolve(input);
+  if (fs.existsSync(resolvedPath)) {
+    return {
+      vcsType: "local",
+      url: "",
+      localPath: resolvedPath,
+      name: path.basename(resolvedPath),
+    };
+  }
+
+  throw new Error(
+    `Invalid repository: ${input}\nProvide a GitHub URL, shorthand (user/repo), or local path.`,
+  );
+}
+
+// ============================================
+// Convert Command
+// ============================================
+
+interface ConvertOptions {
+  output?: string;
+  branch?: string;
+  token?: string;
+  theme?: string;
+  lineNumbers?: boolean;
+  pageNumbers?: boolean;
+  toc?: boolean;
+  ignore?: string[];
+  includeBinary?: boolean;
+  includeHidden?: boolean;
+  removeComments?: boolean;
+  removeEmptyLines?: boolean;
+  concurrency?: string;
+  cache?: boolean;
+  debug?: boolean;
+}
+
+async function runConvert(
+  repository: string,
+  options: ConvertOptions,
+): Promise<void> {
+  const startTime = Date.now();
+
+  try {
+    // Parse repository
+    const repoInfo = parseRepository(repository);
+
+    // Determine output path
+    const outputPath = options.output || `./${repoInfo.name}.pdf`;
+
+    console.log();
+    console.log(
+      `${TEXT}Repository:${RESET}  ${repoInfo.url || repoInfo.localPath}`,
+    );
+    console.log(`${TEXT}Output:${RESET}      ${outputPath}`);
+    console.log(
+      `${TEXT}Theme:${RESET}       ${options.theme || "github-dark"}`,
+    );
+    console.log();
+
+    // Set debug mode
+    logger.setDebugMode(options.debug || false);
 
     // Create configuration
     const configLoader = ConfigLoader.getInstance();
     const config = await configLoader.loadConfig({
       repository: {
-        url: repoAnswers.vcsType !== "local" ? repoAnswers.repository : "",
-        branch: repoAnswers.branch,
-        token: repoAnswers.token,
-        vcsType: repoAnswers.vcsType,
-        localPath:
-          repoAnswers.vcsType === "local"
-            ? path.resolve(repoAnswers.repository)
-            : undefined,
-        useCache: processingAnswers.useCache,
+        url: repoInfo.url,
+        branch: options.branch,
+        token: options.token,
+        vcsType: repoInfo.vcsType,
+        localPath: repoInfo.localPath,
+        useCache: options.cache !== false,
       },
       output: {
-        format: outputAnswers.format as OutputFormat,
-        outputPath: outputAnswers.outputPath,
-        singleFile: outputAnswers.singleFile,
+        format: "pdf",
+        outputPath,
+        singleFile: true,
       },
       style: {
-        theme: styleAnswers.theme,
-        lineNumbers: styleAnswers.lineNumbers,
-        pageNumbers: styleAnswers.pageNumbers,
-        includeTableOfContents: styleAnswers.includeTableOfContents,
+        theme: options.theme || "github-dark",
+        lineNumbers: options.lineNumbers !== false,
+        pageNumbers: options.pageNumbers !== false,
+        includeTableOfContents: options.toc !== false,
       },
       processing: {
-        ignorePatterns: processingAnswers.ignorePatterns,
-        maxConcurrency: Number.parseInt(processingAnswers.maxConcurrency, 10),
-        removeComments: processingAnswers.removeComments,
-        removeEmptyLines: processingAnswers.removeEmptyLines,
-        includeBinaryFiles: processingAnswers.includeBinaryFiles,
-        includeHiddenFiles: processingAnswers.includeHiddenFiles,
-        useIncrementalProcessing: processingAnswers.useIncrementalProcessing,
+        ignorePatterns: options.ignore?.length ? options.ignore : undefined,
+        maxConcurrency: parseInt(options.concurrency || "5", 10),
+        removeComments: options.removeComments || false,
+        removeEmptyLines: options.removeEmptyLines || false,
+        includeBinaryFiles: options.includeBinary || false,
+        includeHiddenFiles: options.includeHidden || false,
       },
       cache: {
-        enabled: processingAnswers.useCache,
-        ttl: 86400000, // 24 hours
+        enabled: options.cache !== false,
+        ttl: 86400000,
       },
-      debug: cliOptions.debug,
+      debug: options.debug || false,
     });
 
-    // Confirm and run conversion
+    // Run conversion with progress
+    const spinner = ora({
+      text: "Fetching repository...",
+      color: "cyan",
+    }).start();
+
+    const repo2pdf = new Repo2PDF(config);
+
+    // Update spinner for each phase
+    spinner.text = "Processing files...";
+
+    const result = await repo2pdf.convert();
+
+    spinner.stopAndPersist({
+      symbol: `${SUCCESS}[OK]${RESET}`,
+      text: `${SUCCESS}PDF generated successfully${RESET}`,
+    });
+
+    // Show results
+    console.log();
+    console.log(`${DIM}────────────────────────────────────────${RESET}`);
+    console.log(`${TEXT}Output:${RESET}    ${result.outputPath}`);
+    console.log(`${TEXT}Size:${RESET}      ${formatFileSize(result.fileSize)}`);
+    console.log(
+      `${TEXT}Time:${RESET}      ${formatDuration(Date.now() - startTime)}`,
+    );
+    console.log(`${DIM}────────────────────────────────────────${RESET}`);
+    console.log();
+  } catch (error) {
+    console.log();
+    console.log(`${ERROR}Error:${RESET} ${(error as Error).message}`);
+    if (options.debug) {
+      console.log();
+      console.log(`${DIM}Stack trace:${RESET}`);
+      console.log(`${DIM}${(error as Error).stack}${RESET}`);
+    } else {
+      console.log(`${DIM}Run with --debug for more details${RESET}`);
+    }
+    console.log();
+    process.exit(1);
+  }
+}
+
+// ============================================
+// Interactive Mode
+// ============================================
+
+async function runInteractive(): Promise<void> {
+  showLogo();
+  console.log();
+  console.log(`${TEXT}Interactive Mode${RESET}`);
+  console.log(
+    `${DIM}Answer the prompts to configure your PDF generation${RESET}`,
+  );
+  console.log();
+
+  try {
+    // Repository source
+    const { source } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "source",
+        message: "Repository URL or path:",
+        validate: (input: string) => {
+          if (!input.trim()) return "Please enter a repository";
+          try {
+            parseRepository(input.trim());
+            return true;
+          } catch (err) {
+            return (err as Error).message;
+          }
+        },
+      },
+    ]);
+
+    const repoInfo = parseRepository(source.trim());
+
+    // Output options
+    const { outputPath, theme } = await inquirer.prompt([
+      {
+        type: "input",
+        name: "outputPath",
+        message: "Output file path:",
+        default: `./${repoInfo.name}.pdf`,
+      },
+      {
+        type: "list",
+        name: "theme",
+        message: "Syntax highlighting theme:",
+        choices: [
+          { name: "GitHub Dark", value: "github-dark" },
+          { name: "GitHub Light", value: "github-light" },
+          { name: "Monokai", value: "monokai" },
+          { name: "Dracula", value: "dracula" },
+          { name: "Nord", value: "nord" },
+          { name: "One Dark Pro", value: "one-dark-pro" },
+          { name: "Solarized Light", value: "solarized-light" },
+          { name: "Solarized Dark", value: "solarized-dark" },
+        ],
+        default: "github-dark",
+      },
+    ]);
+
+    // Include options
+    const { includeLineNumbers, includePageNumbers, includeToc } =
+      await inquirer.prompt([
+        {
+          type: "confirm",
+          name: "includeLineNumbers",
+          message: "Include line numbers?",
+          default: true,
+        },
+        {
+          type: "confirm",
+          name: "includePageNumbers",
+          message: "Include page numbers?",
+          default: true,
+        },
+        {
+          type: "confirm",
+          name: "includeToc",
+          message: "Include table of contents?",
+          default: true,
+        },
+      ]);
+
+    // Processing options
+    const { ignorePatterns, includeBinary, includeHidden } =
+      await inquirer.prompt([
+        {
+          type: "input",
+          name: "ignorePatterns",
+          message: "Patterns to ignore (comma-separated):",
+          default: "node_modules/**, .git/**, *.lock",
+          filter: (input: string) =>
+            input
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter(Boolean),
+        },
+        {
+          type: "confirm",
+          name: "includeBinary",
+          message: "Include binary files?",
+          default: false,
+        },
+        {
+          type: "confirm",
+          name: "includeHidden",
+          message: "Include hidden files?",
+          default: false,
+        },
+      ]);
+
+    // Branch for remote repos
+    let branch = "main";
+    if (repoInfo.vcsType !== "local") {
+      const { repoBranch } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "repoBranch",
+          message: "Branch:",
+          default: "main",
+        },
+      ]);
+      branch = repoBranch;
+    }
+
+    // Confirm
+    console.log();
+    console.log(`${DIM}────────────────────────────────────────${RESET}`);
+    console.log(
+      `${TEXT}Repository:${RESET}  ${repoInfo.url || repoInfo.localPath}`,
+    );
+    console.log(`${TEXT}Output:${RESET}      ${outputPath}`);
+    console.log(`${TEXT}Theme:${RESET}       ${theme}`);
+    console.log(`${TEXT}Branch:${RESET}      ${branch}`);
+    console.log(`${DIM}────────────────────────────────────────${RESET}`);
+    console.log();
+
     const { confirm } = await inquirer.prompt([
       {
         type: "confirm",
@@ -593,56 +496,181 @@ async function runInteractiveMode(
     ]);
 
     if (!confirm) {
-      console.log(chalk.yellow("Conversion cancelled"));
+      console.log(`${WARNING}Cancelled${RESET}`);
       return;
     }
 
-    const spinner = ora("Converting repository...").start();
-
-    const repo2pdf = new Repo2PDF(config);
-    const result = await repo2pdf.convert();
-
-    spinner.succeed(
-      `Repository converted successfully to ${result.outputPath}`,
-    );
-    console.log(chalk.green(`Output: ${result.outputPath}`));
-    console.log(chalk.gray(`Size: ${formatFileSize(result.fileSize)}`));
-    console.log(
-      chalk.gray(`Time: ${(result.generationTime / 1000).toFixed(2)}s`),
-    );
+    // Run conversion
+    await runConvert(source.trim(), {
+      output: outputPath,
+      branch,
+      theme,
+      lineNumbers: includeLineNumbers,
+      pageNumbers: includePageNumbers,
+      toc: includeToc,
+      ignore: ignorePatterns,
+      includeBinary,
+      includeHidden,
+    });
   } catch (error) {
-    ErrorHandler.handle(error as Error, "Interactive Mode");
+    if ((error as any).isTtyError) {
+      console.log(`${ERROR}Interactive mode requires a TTY${RESET}`);
+    } else {
+      console.log(`${ERROR}Error:${RESET} ${(error as Error).message}`);
+    }
+    process.exit(1);
   }
 }
 
-/**
- * Format file size in human-readable format
- */
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
+// ============================================
+// Cache Command
+// ============================================
 
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return (
-    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  );
+interface CacheOptions {
+  clear?: boolean;
+  stats?: boolean;
+  repo?: string;
+  branch?: string;
 }
 
-/**
- * Calculate standard deviation
- */
-function calculateStdDev(values: number[]): number {
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const squareDiffs = values.map((value) => {
-    const diff = value - avg;
-    return diff * diff;
+async function runCache(options: CacheOptions): Promise<void> {
+  const cacheManager = CacheManager.getInstance();
+
+  if (options.clear) {
+    if (options.repo) {
+      cacheManager.clearCache(options.repo, options.branch || "main");
+      console.log(
+        `${SUCCESS}[OK]${RESET} Cleared cache for ${options.repo}#${options.branch || "main"}`,
+      );
+    } else {
+      cacheManager.clearAllCache();
+      console.log(`${SUCCESS}[OK]${RESET} Cleared all cache`);
+    }
+    return;
+  }
+
+  if (options.stats) {
+    const stats = cacheManager.getCacheStats();
+
+    console.log();
+    console.log(`${TEXT}Cache Statistics${RESET}`);
+    console.log(`${DIM}────────────────────────────────────────${RESET}`);
+    console.log(
+      `${TEXT}Status:${RESET}      ${stats.enabled ? `${SUCCESS}Enabled${RESET}` : `${DIM}Disabled${RESET}`}`,
+    );
+    console.log(`${TEXT}Directory:${RESET}   ${stats.cacheDir}`);
+    console.log(
+      `${TEXT}TTL:${RESET}         ${stats.ttl / (60 * 60 * 1000)} hours`,
+    );
+    console.log(`${TEXT}Entries:${RESET}     ${stats.cacheCount}`);
+    console.log(
+      `${TEXT}Total Size:${RESET}  ${formatFileSize(stats.totalSize)}`,
+    );
+
+    if (stats.repositories && stats.repositories.length > 0) {
+      console.log();
+      console.log(`${TEXT}Cached Repositories:${RESET}`);
+      for (const repo of stats.repositories) {
+        console.log(`  ${DIM}•${RESET} ${repo.url}#${repo.branch}`);
+        console.log(
+          `    ${DIM}${repo.fileCount} files • ${new Date(repo.timestamp).toLocaleDateString()}${RESET}`,
+        );
+      }
+    }
+
+    console.log(`${DIM}────────────────────────────────────────${RESET}`);
+    console.log();
+    return;
+  }
+
+  // Default: show help for cache command
+  console.log(`
+${BOLD}Usage:${RESET} repo2pdf cache [options]
+
+${BOLD}Options:${RESET}
+  --clear              Clear all cached data
+  --stats              Show cache statistics
+  --repo <url>         Target specific repository
+  --branch <branch>    Target specific branch
+
+${BOLD}Examples:${RESET}
+  ${DIM}$${RESET} repo2pdf cache --stats
+  ${DIM}$${RESET} repo2pdf cache --clear
+  ${DIM}$${RESET} repo2pdf cache --clear --repo https://github.com/user/repo
+`);
+}
+
+// ============================================
+// Main CLI Setup
+// ============================================
+
+const program = new Command();
+
+program
+  .name("repo2pdf")
+  .description("Convert any repository to a beautiful PDF")
+  .version(VERSION);
+
+// Convert command
+program
+  .command("convert")
+  .description("Convert a repository to PDF")
+  .argument(
+    "<repository>",
+    "Repository URL, shorthand (user/repo), or local path",
+  )
+  .option("-o, --output <path>", "Output file path")
+  .option("-b, --branch <branch>", "Repository branch")
+  .option("-t, --token <token>", "Auth token for private repositories")
+  .option("--theme <theme>", "Syntax highlighting theme", "github-dark")
+  .option("--no-line-numbers", "Disable line numbers")
+  .option("--no-page-numbers", "Disable page numbers")
+  .option("--no-toc", "Disable table of contents")
+  .option("--ignore <patterns...>", "Patterns to ignore")
+  .option("--include-binary", "Include binary files")
+  .option("--include-hidden", "Include hidden files")
+  .option("--remove-comments", "Remove code comments")
+  .option("--remove-empty-lines", "Remove empty lines")
+  .option("--concurrency <number>", "Max concurrent operations", "5")
+  .option("--no-cache", "Disable caching")
+  .option("--debug", "Enable debug output")
+  .action(async (repository: string, options: ConvertOptions) => {
+    showLogo();
+    await runConvert(repository, options);
   });
-  const avgSquareDiff =
-    squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length;
-  return Math.sqrt(avgSquareDiff);
-}
 
-// Run the program
+// Interactive command
+program
+  .command("interactive")
+  .alias("i")
+  .description("Run in interactive mode with guided prompts")
+  .action(async () => {
+    await runInteractive();
+  });
+
+// Cache command
+program
+  .command("cache")
+  .description("Manage the repository cache")
+  .option("--clear", "Clear all cached data")
+  .option("--stats", "Show cache statistics")
+  .option("--repo <url>", "Target specific repository")
+  .option("--branch <branch>", "Target specific branch")
+  .action(async (options: CacheOptions) => {
+    showLogo();
+    console.log();
+    await runCache(options);
+  });
+
+// Default action (no command)
+program.action(() => {
+  showBanner();
+});
+
+// Parse arguments
 program.parse(process.argv);
+
+// If no arguments, show banner
+if (process.argv.length === 2) {
+  showBanner();
+}

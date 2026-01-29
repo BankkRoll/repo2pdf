@@ -85,9 +85,11 @@ export class FileProcessor {
     }
 
     // Check against ignore patterns
-    for (const pattern of ignorePatterns) {
-      if (minimatch(filePath, pattern, { dot: true })) {
-        return true;
+    if (ignorePatterns) {
+      for (const pattern of ignorePatterns) {
+        if (minimatch(filePath, pattern, { dot: true })) {
+          return true;
+        }
       }
     }
 

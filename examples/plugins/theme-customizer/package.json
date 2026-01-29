@@ -1,11 +1,34 @@
 {
   "name": "repo2pdf-plugin-theme-customizer",
   "version": "1.0.0",
-  "description": "Theme customization plugin for repo2pdf",
+  "description": "Theme customization plugin for repo2pdf - inject custom CSS styles",
   "main": "index.js",
+  "types": "index.d.ts",
   "author": "repo2pdf Team",
   "license": "MIT",
+  "keywords": [
+    "repo2pdf",
+    "plugin",
+    "theme",
+    "css",
+    "styling"
+  ],
   "repo2pdfHooks": [
     "postGenerate"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "repo2pdf": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/repo2pdf",
+    "directory": "examples/plugins/theme-customizer"
+  }
 }

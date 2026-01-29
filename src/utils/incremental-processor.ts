@@ -142,7 +142,7 @@ export class IncrementalProcessor {
 
         // For images, convert Buffer to serializable format
         if (file.type === "image" && file.content instanceof Buffer) {
-          clonedFile.content = {
+          (clonedFile as any).content = {
             _type: "Buffer",
             data: Array.from(file.content),
           };

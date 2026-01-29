@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto, { CipherGCM, DecipherGCM } from "crypto";
 import fs from "fs";
 import { logger } from "./logger";
 import os from "os";
@@ -245,7 +245,7 @@ export class SecureTokenManager {
     encrypted += cipher.final("hex");
 
     // Get the authentication tag
-    const authTag = cipher.getAuthTag();
+    const authTag = (cipher as CipherGCM).getAuthTag();
 
     // Return IV + Auth Tag + Encrypted Text
     return iv.toString("hex") + ":" + authTag.toString("hex") + ":" + encrypted;
@@ -273,7 +273,7 @@ export class SecureTokenManager {
     );
 
     // Set authentication tag
-    decipher.setAuthTag(authTag);
+    (decipher as DecipherGCM).setAuthTag(authTag);
 
     // Decrypt the text
     let decrypted = decipher.update(encrypted, "hex", "utf8");

@@ -169,17 +169,25 @@ export function determineLanguage(extension: string): string {
 
 /**
  * Deep merge objects
+ * Note: undefined values in source are skipped (don't overwrite target)
  */
-export function deepMerge<T>(target: T, ...sources: any[]): T {
+export function deepMerge<T extends Record<string, any>>(
+  target: T,
+  ...sources: Partial<T>[]
+): T {
   if (!sources.length) return target;
 
   const source = sources.shift();
 
   if (isObject(target) && isObject(source)) {
     for (const key in source) {
+      // Skip undefined values - they shouldn't overwrite existing values
+      if (source[key] === undefined) {
+        continue;
+      }
       if (isObject(source[key])) {
-        if (!target[key]) Object.assign(target, { [key]: {} });
-        deepMerge(target[key], source[key]);
+        if (!(target as any)[key]) Object.assign(target, { [key]: {} });
+        deepMerge((target as any)[key], source[key] as any);
       } else {
         Object.assign(target, { [key]: source[key] });
       }
@@ -194,4 +202,27 @@ export function deepMerge<T>(target: T, ...sources: any[]): T {
  */
 function isObject(item: any): boolean {
   return item && typeof item === "object" && !Array.isArray(item);
+}
+
+/**
+ * Detect language from filename
+ */
+export function detectLanguage(filename: string): string {
+  const ext = extractExtension(filename);
+  return determineLanguage(ext);
+}
+
+/**
+ * Format file size in human-readable format
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 Bytes";
+
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return (
+    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + " " + sizes[i]
+  );
 }
