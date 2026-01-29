@@ -2,6 +2,39 @@
 
 Use repo2pdf directly in your Node.js applications.
 
+## Prerequisites
+
+- **Node.js** >= 18.0.0
+- **Git** - Required for cloning repositories
+- **Chromium/Chrome** - repo2pdf uses Puppeteer for PDF generation, which requires a Chromium-based browser. Puppeteer will automatically download a compatible version during installation, but in some environments (Docker, CI, serverless) you may need to:
+  - Install system dependencies for Chromium
+  - Set `PUPPETEER_EXECUTABLE_PATH` to point to an existing Chrome/Chromium installation
+  - Use `puppeteer-core` with a browser installed separately
+
+### Docker/CI Considerations
+
+If running in Docker or CI environments, ensure Chromium dependencies are installed:
+
+```dockerfile
+# Debian/Ubuntu
+RUN apt-get update && apt-get install -y \
+    chromium \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    xdg-utils \
+    --no-install-recommends
+```
+
 ## Installation
 
 ```bash

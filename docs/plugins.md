@@ -2,6 +2,12 @@
 
 Extend repo2pdf's functionality by creating plugins that hook into the processing pipeline.
 
+## Prerequisites
+
+- **Node.js** >= 18.0.0
+- **repo2pdf** >= 3.0.0 installed (as a peer dependency)
+- **TypeScript** (recommended) - For type-safe plugin development
+
 ## Overview
 
 The plugin system uses a hook-based architecture. Plugins can:

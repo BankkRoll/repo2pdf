@@ -2,6 +2,12 @@
 
 repo2pdf provides a powerful command-line interface for converting repositories to PDF.
 
+## Prerequisites
+
+- **Node.js** >= 18.0.0
+- **Git** - Required for cloning remote repositories
+- **Chromium/Chrome** - repo2pdf uses Puppeteer for PDF generation. Puppeteer automatically downloads Chromium during installation, but in some environments you may need to configure it manually (see [Programmatic API - Prerequisites](./programmatic.md#prerequisites) for Docker/CI setup)
+
 ## Installation
 
 ```bash
