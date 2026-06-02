@@ -123,6 +123,18 @@ export interface CacheOptions {
 }
 
 /**
+ * Options for the plugin system.
+ */
+export interface PluginOptions {
+  /** Whether the plugin system is enabled (default: true). */
+  enabled?: boolean;
+  /** Additional directories to search for plugins. */
+  directories?: string[];
+  /** Plugin names to disable after loading. */
+  disabled?: string[];
+}
+
+/**
  * Main configuration object for repo2pdf.
  * @example
  * ```typescript
@@ -147,6 +159,8 @@ export interface Config {
   processing: ProcessingOptions;
   /** Caching configuration */
   cache: CacheOptions;
+  /** Plugin system configuration */
+  plugins?: PluginOptions;
   /** Whether to enable debug logging */
   debug: boolean;
 }

@@ -1,6 +1,7 @@
 import type { ProcessedFile, RepoFile } from "../types/file.types";
 import type { Config } from "../types/config.types";
 import { logger } from "../utils/logger";
+import { formatFileSize } from "../utils/file-utils";
 
 /**
  * Processor for binary files
@@ -19,7 +20,7 @@ export class BinaryProcessor {
     try {
       // Create metadata for the binary file
       const metadata = {
-        size: this.formatFileSize(file.size),
+        size: formatFileSize(file.size),
         type: this.getBinaryType(file.extension),
       };
 
@@ -35,21 +36,6 @@ export class BinaryProcessor {
         `Failed to process binary file ${file.path}: ${(error as Error).message}`,
       );
     }
-  }
-
-  /**
-   * Format file size in human-readable format
-   */
-  private formatFileSize(bytes: number): string {
-    if (bytes === 0) return "0 Bytes";
-
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return (
-      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-    );
   }
 
   /**

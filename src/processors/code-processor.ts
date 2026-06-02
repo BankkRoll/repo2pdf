@@ -1,26 +1,35 @@
-import {
-  createHighlighter,
-  type Highlighter,
-  type BundledLanguage,
-} from "shiki";
+import type { Highlighter } from "shiki";
 import type { ProcessedFile, RepoFile } from "../types/file.types";
 import type { Config } from "../types/config.types";
 import { logger } from "../utils/logger";
+import { escapeHtml } from "../utils/string-utils";
+import { stripComments } from "../utils/comment-stripper";
+import { getHighlighter, ensureLanguage } from "../utils/shiki-manager";
+import { HookPoint } from "../plugins/plugin-manager";
+import { noopPluginRunner, type PluginRunner } from "../plugins/plugin-runner";
+
+/** Files larger than this skip comment stripping to avoid pathological cost. */
+const MAX_COMMENT_STRIP_BYTES = 2 * 1024 * 1024; // 2 MB
 
 /**
- * Processor for code files using Shiki for syntax highlighting
+ * Processor for code files using Shiki for syntax highlighting.
+ *
+ * @remarks
+ * Highlighting is delegated to a shared, theme-keyed singleton highlighter
+ * (see {@link getHighlighter}) so we never create one instance per file.
  */
 export class CodeProcessor {
   private config: Config;
-  private highlighter: Highlighter | null = null;
-  private highlighterPromise: Promise<Highlighter> | null = null;
+  private plugins: PluginRunner;
 
-  constructor(config: Config) {
+  constructor(config: Config, plugins: PluginRunner = noopPluginRunner) {
     this.config = config;
+    this.plugins = plugins;
   }
 
   /**
-   * Process a code file
+   * Process a code file: apply processing options, run any TRANSFORM_CONTENT
+   * plugins, then syntax-highlight.
    */
   public async process(file: RepoFile): Promise<ProcessedFile> {
     try {
@@ -28,19 +37,8 @@ export class CodeProcessor {
         throw new Error(`File content is empty for ${file.path}`);
       }
 
-      // Initialize highlighter if not already done
-      if (!this.highlighter && !this.highlighterPromise) {
-        this.initializeHighlighter();
-      }
-
-      // Ensure highlighter is ready
-      if (!this.highlighter) {
-        this.highlighter = await this.highlighterPromise!;
-      }
-
       let content = file.content as string;
 
-      // Apply processing options
       if (this.config.processing.removeComments) {
         content = this.removeComments(content, file.language);
       }
@@ -49,7 +47,20 @@ export class CodeProcessor {
         content = this.removeEmptyLines(content);
       }
 
-      // Highlight code
+      // Plugin hook: allow plugins to transform the (post-processing) content
+      // before highlighting.
+      if (this.plugins.hasHookHandlers(HookPoint.TRANSFORM_CONTENT)) {
+        const transformed = await this.plugins.executeHook(
+          HookPoint.TRANSFORM_CONTENT,
+          content,
+          file,
+          this.config,
+        );
+        if (typeof transformed === "string") {
+          content = transformed;
+        }
+      }
+
       const highlightedHtml = await this.highlightCode(
         content,
         file.language || "text",
@@ -69,92 +80,54 @@ export class CodeProcessor {
   }
 
   /**
-   * Initialize the Shiki highlighter
-   */
-  private initializeHighlighter(): void {
-    this.highlighterPromise = createHighlighter({
-      themes: [this.config.style.theme || "github-dark"],
-      langs: [
-        "javascript",
-        "typescript",
-        "jsx",
-        "tsx",
-        "html",
-        "css",
-        "json",
-        "markdown",
-        "python",
-        "java",
-        "c",
-        "cpp",
-        "csharp",
-        "go",
-        "rust",
-        "php",
-        "ruby",
-        "swift",
-        "bash",
-        "yaml",
-        "toml",
-        "sql",
-        "graphql",
-        "xml",
-        "dockerfile",
-        "shellscript",
-        "text",
-      ],
-    });
-  }
-
-  /**
-   * Highlight code using Shiki
+   * Highlight code using the shared Shiki highlighter, loading the language on
+   * demand and falling back to plain text when highlighting is not possible.
    */
   private async highlightCode(code: string, language: string): Promise<string> {
+    const theme = this.config.style.theme || "github-dark";
+    let highlighter: Highlighter;
+
     try {
-      if (!this.highlighter) {
-        throw new Error("Highlighter not initialized");
-      }
+      highlighter = await getHighlighter(theme);
+    } catch (error) {
+      logger.warn("Failed to initialize syntax highlighter:", error);
+      return `<pre><code>${escapeHtml(code)}</code></pre>`;
+    }
 
-      // Map language to Shiki supported language
-      const mappedLang = this.mapLanguage(language);
-      const theme = this.config.style.theme || "github-dark";
-
-      // Highlight the code
-      let html = this.highlighter.codeToHtml(code, {
-        lang: mappedLang as BundledLanguage,
-        theme,
-      });
-
-      // Remove background-color from inline styles (we set our own)
-      html = html.replace(/background-color:[^;"]+;?/g, "");
-
-      // Remove newlines between line spans (they cause gaps)
-      html = html.replace(
-        /<\/span>\n<span class="line">/g,
-        '</span><span class="line">',
+    try {
+      const mappedLang = await ensureLanguage(
+        highlighter,
+        this.mapLanguage(language),
       );
 
-      return html;
+      return this.postProcessHighlight(
+        highlighter.codeToHtml(code, { lang: mappedLang, theme }),
+      );
     } catch (error) {
       logger.warn(`Failed to highlight code with language ${language}:`, error);
-
-      // Fallback to plain text if highlighting fails
-      if (this.highlighter) {
-        let html = this.highlighter.codeToHtml(code, {
-          lang: "text",
-          theme: this.config.style.theme || "github-dark",
-        });
-        html = html.replace(/background-color:[^;"]+;?/g, "");
-        return html;
+      // Fallback to plain text highlighting (always-loaded "text" grammar).
+      try {
+        return this.postProcessHighlight(
+          highlighter.codeToHtml(code, { lang: "text", theme }),
+        );
+      } catch {
+        return `<pre><code>${escapeHtml(code)}</code></pre>`;
       }
-
-      // If highlighter is not available, return pre-formatted HTML
-      return `<pre><code>${this.escapeHtml(code)}</code></pre>`;
     }
   }
 
   /**
-   * Map language to Shiki supported language
+   * Strip the inline background-color (we apply our own) and collapse the
+   * newlines Shiki inserts between line spans (they create visible gaps).
+   */
+  private postProcessHighlight(html: string): string {
+    return html
+      .replace(/background-color:[^;"]+;?/g, "")
+      .replace(/<\/span>\n<span class="line">/g, '</span><span class="line">');
+  }
+
+  /**
+   * Map a detected language to a Shiki-supported language id.
    */
   private mapLanguage(language: string): string {
     const languageMap: Record<string, string> = {
@@ -162,6 +135,8 @@ export class CodeProcessor {
       ts: "typescript",
       jsx: "jsx",
       tsx: "tsx",
+      mjs: "javascript",
+      cjs: "javascript",
       py: "python",
       rb: "ruby",
       md: "markdown",
@@ -170,17 +145,17 @@ export class CodeProcessor {
       zsh: "bash",
       cs: "csharp",
       "c++": "cpp",
+      cc: "cpp",
       h: "c",
       hpp: "cpp",
       rs: "rust",
       kt: "kotlin",
       kts: "kotlin",
       gradle: "groovy",
-      tf: "terraform",
-      hcl: "terraform",
       conf: "ini",
       ini: "ini",
       properties: "ini",
+      htm: "html",
       txt: "text",
       svg: "xml",
     };
@@ -189,50 +164,19 @@ export class CodeProcessor {
   }
 
   /**
-   * Remove comments from code (basic implementation)
+   * Remove comments from code in a string-aware way (does not touch comment-like
+   * sequences inside string literals). Best-effort and bounded by file size.
    */
   private removeComments(code: string, language?: string): string {
     if (!language) return code;
-
-    try {
-      // Simple comment removal for common languages
-      switch (language.toLowerCase()) {
-        case "javascript":
-        case "typescript":
-        case "jsx":
-        case "tsx":
-        case "java":
-        case "c":
-        case "cpp":
-        case "csharp":
-        case "go":
-        case "swift":
-        case "php":
-          // Remove single-line comments
-          code = code.replace(/\/\/.*$/gm, "");
-          // Remove multi-line comments
-          code = code.replace(/\/\*[\s\S]*?\*\//g, "");
-          break;
-        case "python":
-        case "ruby":
-        case "shell":
-        case "bash":
-        case "yaml":
-          // Remove single-line comments
-          code = code.replace(/#.*$/gm, "");
-          break;
-        case "html":
-        case "xml":
-          // Remove HTML comments
-          code = code.replace(/<!--[\s\S]*?-->/g, "");
-          break;
-        case "css":
-          // Remove CSS comments
-          code = code.replace(/\/\*[\s\S]*?\*\//g, "");
-          break;
-      }
-
+    if (code.length > MAX_COMMENT_STRIP_BYTES) {
+      logger.warn(
+        `Skipping comment removal for large file (${code.length} bytes)`,
+      );
       return code;
+    }
+    try {
+      return stripComments(code, language);
     } catch (error) {
       logger.warn(`Failed to remove comments from ${language} code:`, error);
       return code;
@@ -240,21 +184,9 @@ export class CodeProcessor {
   }
 
   /**
-   * Remove empty lines from code
+   * Remove empty (whitespace-only) lines from code.
    */
   private removeEmptyLines(code: string): string {
     return code.replace(/^\s*[\r\n]/gm, "");
-  }
-
-  /**
-   * Escape HTML special characters
-   */
-  private escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
   }
 }

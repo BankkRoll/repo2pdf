@@ -33,9 +33,9 @@ repo2pdf convert <repository> [options]
 | Option                   | Alias | Description                  | Default             |
 | ------------------------ | ----- | ---------------------------- | ------------------- |
 | `--output <path>`        | `-o`  | Output file path             | `./<repo-name>.pdf` |
-| `--branch <branch>`      | `-b`  | Repository branch            | `main`              |
+| `--branch <branch>`      | `-b`  | Repository branch            | repo's default branch (auto-detected) |
 | `--token <token>`        | `-t`  | Auth token for private repos | -                   |
-| `--theme <theme>`        |       | Syntax highlighting theme    | `github-dark`       |
+| `--theme <theme>`        |       | Syntax highlighting theme    | `github-light`      |
 | `--no-line-numbers`      |       | Disable line numbers         | -                   |
 | `--no-page-numbers`      |       | Disable page numbers         | -                   |
 | `--no-toc`               |       | Disable table of contents    | -                   |
@@ -94,13 +94,13 @@ repo2pdf interactive
 
 Interactive mode walks you through:
 
-1. Repository source selection (GitHub, GitLab, Bitbucket, Local)
-2. Repository URL or path
-3. Branch selection
-4. Output file path
-5. Theme selection
-6. Options (line numbers, page numbers, TOC)
-7. File filtering patterns
+1. Repository URL or path
+2. Output file path and theme
+3. Display options (line numbers, page numbers, table of contents)
+4. File filtering (ignore patterns, include binary, include hidden)
+5. Processing options (remove comments, remove empty lines)
+6. Branch and auth token (for remote repositories)
+7. Advanced options (concurrency, debug)
 
 ### `cache`
 
@@ -160,7 +160,17 @@ repo2pdf convert https://gitlab.com/user/repo -t glpat-xxxxx
 ```bash
 # Full URL
 repo2pdf convert https://bitbucket.org/user/repo
+
+# Private repo with an app password (format: "username:app_password")
+repo2pdf convert https://bitbucket.org/user/repo -t "myuser:my_app_password"
+
+# Private repo with a workspace/access token (no colon -> Bearer auth)
+repo2pdf convert https://bitbucket.org/user/repo -t my_access_token
 ```
+
+> **Bitbucket token format:** if `--token` contains a colon it is treated as
+> `username:app_password` (HTTP Basic auth); otherwise it is treated as a
+> workspace/access token (Bearer auth).
 
 ### Local Directory
 
@@ -221,14 +231,10 @@ repo2pdf convert user/private-repo
 
 ## Exit Codes
 
-| Code | Description           |
-| ---- | --------------------- |
-| `0`  | Success               |
-| `1`  | General error         |
-| `2`  | Invalid arguments     |
-| `3`  | Repository not found  |
-| `4`  | Authentication failed |
-| `5`  | Generation failed     |
+| Code | Description                                                        |
+| ---- | ----------------------------------------------------------------- |
+| `0`  | Success                                                           |
+| `1`  | Error (invalid input, repository not found, auth failure, or generation failure — run with `--debug` for details) |
 
 ## See Also
 

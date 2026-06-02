@@ -16,10 +16,11 @@
  * @packageDocumentation
  */
 
+import type { Config, IRepo2PDFPlugin, RepoFile } from "repo2pdf";
+
+import { HookPoint } from "repo2pdf";
 import fs from "fs";
 import path from "path";
-import { HookPoint } from "repo2pdf";
-import type { IRepo2PDFPlugin, RepoFile, Config } from "repo2pdf";
 
 /**
  * Filter configuration options.
@@ -84,15 +85,6 @@ export interface FilterConfig {
    * Exclude hidden files and directories (starting with .)
    */
   excludeHidden?: boolean;
-
-  /**
-   * Custom filter function as a string (evaluated at runtime).
-   * Receives `file` object, should return boolean.
-   * Example: "file.size < 10000 && !file.path.includes('vendor')"
-   *
-   * @security Only use with trusted configuration files.
-   */
-  customFilter?: string;
 }
 
 /**
@@ -224,13 +216,9 @@ class FileFilterPlugin implements IRepo2PDFPlugin {
         if (typeof fileConfig === "object" && fileConfig !== null) {
           this.config = { ...DEFAULT_CONFIG, ...fileConfig };
           this.loadedConfigPath = configPath;
-          console.log(`[file-filter] Loaded config from: ${configPath}`);
         }
-      } catch (error) {
-        console.warn(
-          `[file-filter] Error loading config from ${configPath}:`,
-          error instanceof Error ? error.message : error,
-        );
+      } catch {
+        // Config file exists but is invalid - use defaults
       }
     }
 
@@ -388,25 +376,6 @@ class FileFilterPlugin implements IRepo2PDFPlugin {
         )
       ) {
         return false;
-      }
-    }
-
-    // 7. Custom filter (use with caution)
-    if (this.config.customFilter) {
-      try {
-        // eslint-disable-next-line no-new-func
-        const filterFn = new Function(
-          "file",
-          `return ${this.config.customFilter}`,
-        );
-        if (!filterFn(file)) {
-          return false;
-        }
-      } catch (error) {
-        console.warn(
-          `[file-filter] Custom filter error for ${filePath}:`,
-          error instanceof Error ? error.message : error,
-        );
       }
     }
 

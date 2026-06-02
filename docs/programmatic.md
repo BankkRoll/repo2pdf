@@ -108,7 +108,7 @@ const result = await convertRepository({
     },
   },
   style: {
-    theme: "github-dark",
+    theme: "github-light",
     lineNumbers: true,
     pageNumbers: true,
     includeTableOfContents: true,
@@ -284,11 +284,14 @@ const files = cache.getCachedFiles("https://github.com/user/repo", "main");
 // Cache files
 cache.cacheFiles("https://github.com/user/repo", "main", files);
 
-// Clear cache
-cache.clear();
+// Clear the cache for a specific repository + branch
+cache.clearCache("https://github.com/user/repo", "main");
 
-// Get stats
-const stats = cache.getStats();
+// Clear all cached data
+cache.clearAllCache();
+
+// Get cache statistics
+const stats = cache.getCacheStats();
 ```
 
 ## Examples

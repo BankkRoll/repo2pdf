@@ -3,6 +3,7 @@
 import { CacheManager } from "./utils/cache-manager";
 import { Command } from "commander";
 import { ConfigLoader } from "./config/config-loader";
+import { defaultConfig } from "./config/default-config";
 import { Repo2PDF } from "./index";
 import type { VCSType } from "./types/config.types";
 import fs from "fs";
@@ -47,13 +48,14 @@ const LOGO_LINES = [
 // ============================================
 
 function getVersion(): string {
-  try {
-    const pkgPath = path.join(__dirname, "..", "package.json");
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+  const pkgPath = path.join(__dirname, "..", "package.json");
+  if (fs.existsSync(pkgPath)) {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as {
+      version: string;
+    };
     return pkg.version;
-  } catch {
-    return "3.0.0";
   }
+  return "3.0.0";
 }
 
 const VERSION = getVersion();
@@ -262,12 +264,26 @@ async function runConvert(
     );
     console.log(`${TEXT}Output:${RESET}      ${outputPath}`);
     console.log(
-      `${TEXT}Theme:${RESET}       ${options.theme || "github-dark"}`,
+      `${TEXT}Theme:${RESET}       ${options.theme || "github-light"}`,
     );
     console.log();
 
     // Set debug mode
     logger.setDebugMode(options.debug || false);
+
+    // Validate --concurrency
+    const concurrency = parseInt(options.concurrency || "5", 10);
+    if (Number.isNaN(concurrency) || concurrency < 1) {
+      throw new Error(
+        `Invalid --concurrency value: "${options.concurrency}". Must be a positive integer.`,
+      );
+    }
+
+    // Merge user --ignore patterns with the built-in defaults (rather than
+    // replacing them), so protections like node_modules/** and .git/** survive.
+    const ignorePatterns = options.ignore?.length
+      ? [...defaultConfig.processing.ignorePatterns!, ...options.ignore]
+      : undefined;
 
     // Create configuration
     const configLoader = ConfigLoader.getInstance();
@@ -286,14 +302,14 @@ async function runConvert(
         singleFile: true,
       },
       style: {
-        theme: options.theme || "github-dark",
+        theme: options.theme || "github-light",
         lineNumbers: options.lineNumbers !== false,
         pageNumbers: options.pageNumbers !== false,
         includeTableOfContents: options.toc !== false,
       },
       processing: {
-        ignorePatterns: options.ignore?.length ? options.ignore : undefined,
-        maxConcurrency: parseInt(options.concurrency || "5", 10),
+        ignorePatterns,
+        maxConcurrency: concurrency,
         removeComments: options.removeComments || false,
         removeEmptyLines: options.removeEmptyLines || false,
         includeBinaryFiles: options.includeBinary || false,
@@ -314,10 +330,12 @@ async function runConvert(
 
     const repo2pdf = new Repo2PDF(config);
 
-    // Update spinner for each phase
-    spinner.text = "Processing files...";
-
-    const result = await repo2pdf.convert();
+    // Reflect real pipeline phases in the spinner.
+    const result = await repo2pdf.convert({
+      onPhase: (_phase, message) => {
+        spinner.text = message;
+      },
+    });
 
     spinner.stopAndPersist({
       symbol: `${SUCCESS}[OK]${RESET}`,
@@ -396,16 +414,18 @@ async function runInteractive(): Promise<void> {
         name: "theme",
         message: "Syntax highlighting theme:",
         choices: [
-          { name: "GitHub Dark", value: "github-dark" },
           { name: "GitHub Light", value: "github-light" },
+          { name: "GitHub Dark", value: "github-dark" },
           { name: "Monokai", value: "monokai" },
           { name: "Dracula", value: "dracula" },
           { name: "Nord", value: "nord" },
           { name: "One Dark Pro", value: "one-dark-pro" },
+          { name: "Tokyo Night", value: "tokyo-night" },
           { name: "Solarized Light", value: "solarized-light" },
           { name: "Solarized Dark", value: "solarized-dark" },
+          { name: "Vitesse Dark", value: "vitesse-dark" },
         ],
-        default: "github-dark",
+        default: "github-light",
       },
     ]);
 
@@ -460,19 +480,59 @@ async function runInteractive(): Promise<void> {
         },
       ]);
 
-    // Branch for remote repos
+    // Processing transform options
+    const { removeComments, removeEmptyLines } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "removeComments",
+        message: "Remove comments? (best-effort, may affect some strings)",
+        default: false,
+      },
+      {
+        type: "confirm",
+        name: "removeEmptyLines",
+        message: "Remove empty lines?",
+        default: false,
+      },
+    ]);
+
+    // Branch + token for remote repos
     let branch = "main";
+    let token: string | undefined;
     if (repoInfo.vcsType !== "local") {
-      const { repoBranch } = await inquirer.prompt([
+      const { repoBranch, repoToken } = await inquirer.prompt([
         {
           type: "input",
           name: "repoBranch",
-          message: "Branch:",
-          default: "main",
+          message: "Branch (leave blank for the repository's default):",
+          default: "",
+        },
+        {
+          type: "password",
+          name: "repoToken",
+          mask: "*",
+          message: "Auth token for private repos (optional):",
         },
       ]);
-      branch = repoBranch;
+      branch = repoBranch || "main";
+      token = repoToken ? repoToken.trim() : undefined;
     }
+
+    // Advanced options
+    const { concurrency, debug } = await inquirer.prompt([
+      {
+        type: "number",
+        name: "concurrency",
+        message: "Max concurrent operations:",
+        default: 5,
+      },
+      {
+        type: "confirm",
+        name: "debug",
+        message: "Enable debug output?",
+        default: false,
+      },
+    ]);
 
     // Confirm
     console.log();
@@ -504,6 +564,7 @@ async function runInteractive(): Promise<void> {
     await runConvert(source.trim(), {
       output: outputPath,
       branch,
+      token,
       theme,
       lineNumbers: includeLineNumbers,
       pageNumbers: includePageNumbers,
@@ -511,12 +572,19 @@ async function runInteractive(): Promise<void> {
       ignore: ignorePatterns,
       includeBinary,
       includeHidden,
+      removeComments,
+      removeEmptyLines,
+      concurrency: String(concurrency),
+      debug,
     });
   } catch (error) {
-    if ((error as any).isTtyError) {
+    const inquirerError = error as { isTtyError?: boolean; message?: string };
+    if (inquirerError.isTtyError) {
       console.log(`${ERROR}Interactive mode requires a TTY${RESET}`);
     } else {
-      console.log(`${ERROR}Error:${RESET} ${(error as Error).message}`);
+      console.log(
+        `${ERROR}Error:${RESET} ${inquirerError.message || "Unknown error"}`,
+      );
     }
     process.exit(1);
   }
@@ -622,7 +690,7 @@ program
   .option("-o, --output <path>", "Output file path")
   .option("-b, --branch <branch>", "Repository branch")
   .option("-t, --token <token>", "Auth token for private repositories")
-  .option("--theme <theme>", "Syntax highlighting theme", "github-dark")
+  .option("--theme <theme>", "Syntax highlighting theme", "github-light")
   .option("--no-line-numbers", "Disable line numbers")
   .option("--no-page-numbers", "Disable page numbers")
   .option("--no-toc", "Disable table of contents")
@@ -660,6 +728,15 @@ program
     showLogo();
     console.log();
     await runCache(options);
+  });
+
+// Help command (rich, branded help beyond commander's default)
+program
+  .command("help")
+  .description("Show detailed help")
+  .action(() => {
+    showLogo();
+    showHelp();
   });
 
 // Default action (no command)

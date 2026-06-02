@@ -62,52 +62,50 @@ export class ConfigLoader {
   private loadFromEnv(): Partial<Config> {
     const envConfig: Partial<Config> = {};
 
-    // Only add defined env vars
-    if (process.env.REPO2PDF_TOKEN || process.env.REPO2PDF_BRANCH) {
-      envConfig.repository = {} as any;
-      if (process.env.REPO2PDF_TOKEN) {
-        (envConfig.repository as any).token = process.env.REPO2PDF_TOKEN;
-      }
-      if (process.env.REPO2PDF_BRANCH) {
-        (envConfig.repository as any).branch = process.env.REPO2PDF_BRANCH;
-      }
-      if (process.env.REPO2PDF_USE_CACHE) {
-        (envConfig.repository as any).useCache =
-          process.env.REPO2PDF_USE_CACHE === "true";
-      }
+    // Repository options
+    const repoConfig: Partial<Config["repository"]> = {};
+    if (process.env.REPO2PDF_TOKEN) {
+      repoConfig.token = process.env.REPO2PDF_TOKEN;
+    }
+    if (process.env.REPO2PDF_BRANCH) {
+      repoConfig.branch = process.env.REPO2PDF_BRANCH;
+    }
+    if (process.env.REPO2PDF_USE_CACHE) {
+      repoConfig.useCache = process.env.REPO2PDF_USE_CACHE === "true";
+    }
+    if (Object.keys(repoConfig).length > 0) {
+      envConfig.repository = repoConfig as Config["repository"];
     }
 
-    if (
-      process.env.REPO2PDF_USE_INCREMENTAL ||
-      process.env.REPO2PDF_CHUNK_SIZE
-    ) {
-      envConfig.processing = {} as any;
-      if (process.env.REPO2PDF_USE_INCREMENTAL) {
-        (envConfig.processing as any).useIncrementalProcessing =
-          process.env.REPO2PDF_USE_INCREMENTAL === "true";
-      }
-      if (process.env.REPO2PDF_CHUNK_SIZE) {
-        (envConfig.processing as any).incrementalChunkSize = Number.parseInt(
-          process.env.REPO2PDF_CHUNK_SIZE,
-          10,
-        );
-      }
+    // Processing options
+    const processingConfig: Partial<Config["processing"]> = {};
+    if (process.env.REPO2PDF_USE_INCREMENTAL) {
+      processingConfig.useIncrementalProcessing =
+        process.env.REPO2PDF_USE_INCREMENTAL === "true";
+    }
+    if (process.env.REPO2PDF_CHUNK_SIZE) {
+      processingConfig.incrementalChunkSize = Number.parseInt(
+        process.env.REPO2PDF_CHUNK_SIZE,
+        10,
+      );
+    }
+    if (Object.keys(processingConfig).length > 0) {
+      envConfig.processing = processingConfig as Config["processing"];
     }
 
-    if (process.env.REPO2PDF_CACHE_ENABLED || process.env.REPO2PDF_CACHE_TTL) {
-      envConfig.cache = {} as any;
-      if (process.env.REPO2PDF_CACHE_ENABLED) {
-        (envConfig.cache as any).enabled =
-          process.env.REPO2PDF_CACHE_ENABLED === "true";
-      }
-      if (process.env.REPO2PDF_CACHE_TTL) {
-        (envConfig.cache as any).ttl = Number.parseInt(
-          process.env.REPO2PDF_CACHE_TTL,
-          10,
-        );
-      }
+    // Cache options
+    const cacheConfig: Partial<Config["cache"]> = {};
+    if (process.env.REPO2PDF_CACHE_ENABLED) {
+      cacheConfig.enabled = process.env.REPO2PDF_CACHE_ENABLED === "true";
+    }
+    if (process.env.REPO2PDF_CACHE_TTL) {
+      cacheConfig.ttl = Number.parseInt(process.env.REPO2PDF_CACHE_TTL, 10);
+    }
+    if (Object.keys(cacheConfig).length > 0) {
+      envConfig.cache = cacheConfig as Config["cache"];
     }
 
+    // Debug flag
     if (process.env.REPO2PDF_DEBUG) {
       envConfig.debug = process.env.REPO2PDF_DEBUG === "true";
     }

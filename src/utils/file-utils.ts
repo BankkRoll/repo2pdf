@@ -171,25 +171,29 @@ export function determineLanguage(extension: string): string {
  * Deep merge objects
  * Note: undefined values in source are skipped (don't overwrite target)
  */
-export function deepMerge<T extends Record<string, any>>(
-  target: T,
-  ...sources: Partial<T>[]
-): T {
+export function deepMerge<T>(target: T, ...sources: Array<Partial<T>>): T {
   if (!sources.length) return target;
 
   const source = sources.shift();
 
   if (isObject(target) && isObject(source)) {
     for (const key in source) {
+      const sourceValue = source[key as keyof typeof source];
       // Skip undefined values - they shouldn't overwrite existing values
-      if (source[key] === undefined) {
+      if (sourceValue === undefined) {
         continue;
       }
-      if (isObject(source[key])) {
-        if (!(target as any)[key]) Object.assign(target, { [key]: {} });
-        deepMerge((target as any)[key], source[key] as any);
+      if (isObject(sourceValue)) {
+        const targetObj = target as Record<string, unknown>;
+        if (!targetObj[key]) {
+          targetObj[key] = {};
+        }
+        deepMerge(
+          targetObj[key] as Record<string, unknown>,
+          sourceValue as Partial<Record<string, unknown>>,
+        );
       } else {
-        Object.assign(target, { [key]: source[key] });
+        (target as Record<string, unknown>)[key] = sourceValue;
       }
     }
   }
@@ -200,8 +204,8 @@ export function deepMerge<T extends Record<string, any>>(
 /**
  * Check if value is an object
  */
-function isObject(item: any): boolean {
-  return item && typeof item === "object" && !Array.isArray(item);
+function isObject(item: unknown): item is Record<string, unknown> {
+  return item !== null && typeof item === "object" && !Array.isArray(item);
 }
 
 /**
@@ -223,6 +227,44 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return (
-    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(0)) + " " + sizes[i]
+    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   );
+}
+
+/**
+ * Organize files into a map keyed by their parent directory path.
+ *
+ * @remarks
+ * Single source of truth for the directory grouping previously duplicated in
+ * the file processor and PDF generator. Results are sorted: directories by
+ * locale-aware path order, and files within each directory by name. Root-level
+ * files are grouped under the empty-string key `""`.
+ *
+ * @param files - Files to organize (any object carrying `path` and `name`)
+ * @returns Sorted map of directory path -> files in that directory
+ */
+export function organizeFilesByDirectory<T extends { path: string; name: string }>(
+  files: T[],
+): Record<string, T[]> {
+  const directories: Record<string, T[]> = {};
+
+  for (const file of files) {
+    const dirPath = file.path.includes("/")
+      ? file.path.substring(0, file.path.lastIndexOf("/"))
+      : "";
+
+    if (!directories[dirPath]) {
+      directories[dirPath] = [];
+    }
+
+    directories[dirPath].push(file);
+  }
+
+  // Sort directories by path and files within each directory by name
+  const sorted: Record<string, T[]> = {};
+  for (const dir of Object.keys(directories).sort((a, b) => a.localeCompare(b))) {
+    sorted[dir] = directories[dir].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return sorted;
 }

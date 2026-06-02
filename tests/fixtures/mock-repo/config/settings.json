@@ -1,0 +1,15 @@
+{
+  "appName": "Mock App",
+  "version": "1.0.0",
+  "debug": false,
+  "features": {
+    "darkMode": true,
+    "notifications": true,
+    "analytics": false
+  },
+  "api": {
+    "baseUrl": "https://api.example.com",
+    "timeout": 5000,
+    "retries": 3
+  }
+}

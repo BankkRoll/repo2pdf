@@ -1,4 +1,8 @@
-import puppeteer, { type Browser, type Page } from "puppeteer";
+import puppeteer, {
+  type Browser,
+  type Page,
+  type PaperFormat,
+} from "puppeteer";
 import type { Config } from "../types/config.types";
 import type {
   PDFGenerationOptions,
@@ -7,12 +11,11 @@ import type {
 } from "../types/output.types";
 import type { ProcessedFile } from "../types/file.types";
 import { logger } from "../utils/logger";
-import {
-  getTheme,
-  getFolderIcon,
-  getFileIcon,
-  type Theme,
-} from "../styles/themes";
+import { getTheme, getFolderIcon, getFileIcon } from "../styles/themes";
+import { escapeHtml } from "../utils/string-utils";
+import { formatFileSize, organizeFilesByDirectory } from "../utils/file-utils";
+import { HookPoint } from "../plugins/plugin-manager";
+import { noopPluginRunner, type PluginRunner } from "../plugins/plugin-runner";
 import fs from "fs";
 
 /**
@@ -21,9 +24,11 @@ import fs from "fs";
 export class PDFGenerator {
   private config: Config;
   private browser: Browser | null = null;
+  private plugins: PluginRunner;
 
-  constructor(config: Config) {
+  constructor(config: Config, plugins: PluginRunner = noopPluginRunner) {
     this.config = config;
+    this.plugins = plugins;
   }
 
   /**
@@ -38,7 +43,22 @@ export class PDFGenerator {
 
     try {
       // Generate HTML content first
-      const htmlContent = this.generateHTML(files, repoInfo);
+      let htmlContent = this.generateHTML(files, repoInfo);
+
+      // POST_GENERATE: let plugins transform the HTML before it is rendered to
+      // PDF (e.g. inject custom CSS / watermarks). The hook receives a
+      // GenerationOutput whose `content` is the HTML; a returned `content`
+      // replaces it.
+      if (this.plugins.hasHookHandlers(HookPoint.POST_GENERATE)) {
+        const result = (await this.plugins.executeHook(
+          HookPoint.POST_GENERATE,
+          { format: "pdf", content: htmlContent, outputPath },
+          this.config,
+        )) as { content?: string } | undefined;
+        if (result && typeof result.content === "string") {
+          htmlContent = result.content;
+        }
+      }
 
       // Initialize browser if not already done
       if (!this.browser) {
@@ -85,7 +105,7 @@ export class PDFGenerator {
       // Generate PDF
       await page.pdf({
         path: outputPath,
-        format: pdfOptions.pageSize as any,
+        format: pdfOptions.pageSize as PaperFormat,
         landscape: pdfOptions.landscape,
         margin: pdfOptions.margin,
         printBackground: true,
@@ -124,8 +144,8 @@ export class PDFGenerator {
   ): string {
     const { style } = this.config;
 
-    // Organize files by directory
-    const filesByDirectory = this.organizeFilesByDirectory(files);
+    // Organize files by directory (shared, sorted grouping)
+    const filesByDirectory = organizeFilesByDirectory(files);
 
     // Generate table of contents
     const tocItems = this.generateTOCItems(filesByDirectory);
@@ -157,18 +177,27 @@ export class PDFGenerator {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${this.escapeHtml(repoInfo.name)} - Repository Documentation</title>
+  <title>${escapeHtml(repoInfo.name)} - Repository Documentation</title>
   <style>
     ${css}
   </style>
 </head>
 <body class="theme-${style.theme}">
   <div class="container">
-    <header>
-      <h1>${this.escapeHtml(repoInfo.name)}</h1>
-      ${repoInfo.description ? `<p class="description">${this.escapeHtml(repoInfo.description)}</p>` : ""}
-      <p class="repo-url"><a href="${repoInfo.url}" target="_blank">${repoInfo.url}</a></p>
-      <p class="generated-date">Generated on ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} | ${totalFiles} files | ${totalLines.toLocaleString()} lines of code</p>
+    <header class="cover">
+      <div class="cover-mark">${this.escapeInitials(repoInfo.name)}</div>
+      <div class="cover-body">
+        <h1>${escapeHtml(repoInfo.name)}</h1>
+        ${repoInfo.description ? `<p class="description">${escapeHtml(repoInfo.description)}</p>` : ""}
+        ${repoInfo.url ? `<p class="repo-url"><a href="${escapeHtml(repoInfo.url)}">${escapeHtml(repoInfo.url)}</a></p>` : ""}
+      </div>
+      <div class="cover-stats">
+        <span class="stat"><span class="stat-num">${totalFiles.toLocaleString()}</span><span class="stat-label">files</span></span>
+        <span class="stat-divider"></span>
+        <span class="stat"><span class="stat-num">${totalLines.toLocaleString()}</span><span class="stat-label">lines</span></span>
+        <span class="stat-divider"></span>
+        <span class="stat"><span class="stat-num">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</span><span class="stat-label">generated</span></span>
+      </div>
     </header>
 
     ${tocHtml}
@@ -187,37 +216,16 @@ export class PDFGenerator {
   }
 
   /**
-   * Organize files by directory
+   * Build a short uppercase initials badge from a repository name.
    */
-  private organizeFilesByDirectory(
-    files: ProcessedFile[],
-  ): Record<string, ProcessedFile[]> {
-    const directories: Record<string, ProcessedFile[]> = {};
-
-    for (const file of files) {
-      const dirPath = file.path.includes("/")
-        ? file.path.substring(0, file.path.lastIndexOf("/"))
-        : "";
-
-      if (!directories[dirPath]) {
-        directories[dirPath] = [];
-      }
-
-      directories[dirPath].push(file);
-    }
-
-    // Sort directories and files
-    const sortedDirectories: Record<string, ProcessedFile[]> = {};
-
-    Object.keys(directories)
-      .sort((a, b) => a.localeCompare(b))
-      .forEach((dir) => {
-        sortedDirectories[dir] = directories[dir].sort((a, b) =>
-          a.name.localeCompare(b.name),
-        );
-      });
-
-    return sortedDirectories;
+  private escapeInitials(name: string): string {
+    const cleaned = name.replace(/[^a-zA-Z0-9]+/g, " ").trim();
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    const initials =
+      parts.length >= 2
+        ? parts[0][0] + parts[1][0]
+        : cleaned.slice(0, 2) || "R2";
+    return escapeHtml(initials.toUpperCase());
   }
 
   /**
@@ -282,355 +290,335 @@ export class PDFGenerator {
       "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace";
     const fontSize = this.config.style.fontSize || "14px";
 
+    const isLight = theme.type === "light";
+    // A subtle page tint distinct from the code-card background, so cards read
+    // as elevated panels on the page.
+    const pageBg = isLight ? "#ffffff" : c.background;
+    const codeLineHeight = "22px";
+
     return `
       /* Theme: ${theme.name} (${theme.type}) */
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      html {
-        scroll-behavior: smooth;
-      }
-
-      html, body {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
+      html, body { width: 100%; margin: 0; padding: 0; }
 
       body {
         font-family: ${fontFamily};
         font-size: ${fontSize};
-        line-height: 1.6;
+        line-height: 1.65;
         color: ${c.text};
-        background-color: ${c.background};
+        background-color: ${pageBg};
+        -webkit-font-smoothing: antialiased;
       }
 
       .container {
         width: 100%;
-        min-height: 100%;
-        margin: 0;
-        padding: 32px;
-        background-color: ${c.background};
+        margin: 0 auto;
+        padding: 40px 52px 36px;
+        background-color: ${pageBg};
       }
 
-      /* Header */
-      header {
-        margin-bottom: 48px;
-        padding-bottom: 24px;
-        border-bottom: 1px solid ${c.border};
-        text-align: center;
-      }
+      h1, h2, h3 { color: ${c.heading}; font-weight: 650; margin: 0; }
 
-      h1, h2, h3, h4, h5, h6 {
-        color: ${c.heading};
-        font-weight: 600;
-        margin: 0;
-      }
+      a { color: ${c.link}; text-decoration: none; }
+      a:hover { color: ${c.linkHover}; text-decoration: underline; }
 
-      h1 {
-        font-size: 2em;
-        margin-bottom: 16px;
-      }
-
-      h2 {
-        font-size: 1.5em;
-        margin-top: 32px;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
+      /* ---- Cover (compact, left-aligned banner) ---- */
+      .cover {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 0 0 20px;
+        margin-bottom: 28px;
         border-bottom: 1px solid ${c.border};
       }
 
-      h3 {
-        font-size: 1.25em;
-      }
-
-      a {
-        color: ${c.link};
-        text-decoration: none;
-      }
-
-      a:hover {
-        color: ${c.linkHover};
-        text-decoration: underline;
-      }
-
-      .description {
-        font-size: 1.1em;
-        color: ${c.textMuted};
-        margin-bottom: 16px;
-      }
-
-      .repo-url {
+      .cover-mark {
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+        border-radius: 11px;
+        background: ${c.link};
+        color: ${pageBg};
         font-family: ${monoFont};
-        font-size: 0.875em;
-        margin-bottom: 8px;
+        font-weight: 700;
+        font-size: 17px;
+        line-height: 46px;
+        text-align: center;
+        letter-spacing: 0.5px;
       }
 
-      .generated-date {
+      .cover-body { flex: 1; min-width: 0; }
+
+      .cover h1 {
+        font-size: 22px;
+        letter-spacing: -0.3px;
+        margin-bottom: 3px;
+      }
+
+      .cover .description {
+        font-size: 13px;
         color: ${c.textMuted};
-        font-size: 0.875em;
+        margin: 0 0 4px;
       }
 
-      /* Table of Contents - GitHub file tree style */
+      .cover .repo-url {
+        font-family: ${monoFont};
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+      .cover-stats {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 16px;
+        font-family: ${monoFont};
+      }
+      .cover-stats .stat { display: inline-flex; flex-direction: column; align-items: flex-end; }
+      .cover-stats .stat-num { font-size: 14px; font-weight: 700; color: ${c.heading}; }
+      .cover-stats .stat-label {
+        font-size: 9.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: ${c.textMuted};
+      }
+      .cover-stats .stat-divider { width: 1px; height: 22px; background: ${c.border}; }
+
+      /* ---- Table of Contents (compact) ---- */
       .toc {
-        margin-bottom: 48px;
-        padding-bottom: 32px;
-        border-bottom: 1px solid ${c.border};
+        margin-bottom: 34px;
+        padding: 16px 20px;
+        border: 1px solid ${c.border};
+        border-radius: 10px;
+        background: ${c.headerBackground};
       }
 
       .toc h2 {
-        margin-top: 0;
-        margin-bottom: 16px;
-        font-size: 12px;
-        font-weight: 600;
+        margin: 0 0 10px;
+        font-size: 10px;
+        font-weight: 700;
         color: ${c.textMuted};
-        border-bottom: none;
         text-transform: uppercase;
         letter-spacing: 1px;
       }
 
-      .toc-list {
-        list-style: none;
-        font-family: ${monoFont};
-        font-size: 13px;
-      }
+      .toc-list { list-style: none; font-size: 12.5px; }
+      .toc-columns { columns: 3; column-gap: 28px; }
+      .toc-list li { margin: 0; padding: 0; break-inside: avoid; }
 
-      .toc-list li {
-        margin: 0;
-        padding: 0;
-      }
-
-      .toc-list .toc-directory {
-        margin-top: 4px;
-      }
-
-      .toc-list .toc-directory:first-child {
-        margin-top: 0;
-      }
+      .toc-list .toc-directory { margin-top: 8px; }
+      .toc-list .toc-directory:first-child { margin-top: 0; }
 
       .toc-list .toc-directory > span {
         display: flex;
         align-items: center;
-        padding: 4px 8px;
+        padding: 1.5px 0;
         color: ${c.heading};
-        font-weight: 600;
+        font-weight: 650;
+        font-family: ${monoFont};
+        font-size: 12px;
       }
 
       .toc-list .toc-directory > span::before {
         content: '';
         display: inline-block;
-        width: 16px;
-        height: 16px;
-        margin-right: 8px;
+        width: 13px; height: 13px;
+        margin-right: 7px;
         background-image: ${getFolderIcon(c.folderIcon)};
         background-size: contain;
         background-repeat: no-repeat;
         flex-shrink: 0;
       }
 
-      .toc-list .toc-directory ul {
-        list-style: none;
-        padding-left: 24px;
-      }
+      .toc-list .toc-directory ul { list-style: none; padding-left: 20px; }
 
       .toc-list .toc-file a {
         display: flex;
         align-items: center;
-        padding: 4px 8px;
+        padding: 1.5px 4px;
         color: ${c.text};
-        text-decoration: none;
-        border-radius: 6px;
-      }
-
-      .toc-list .toc-file a:hover {
-        background-color: ${c.hoverBackground};
-        color: ${c.heading};
+        font-family: ${monoFont};
+        font-size: 11.5px;
+        border-radius: 5px;
       }
 
       .toc-list .toc-file a::before {
         content: '';
         display: inline-block;
-        width: 16px;
-        height: 16px;
-        margin-right: 8px;
+        width: 12px; height: 12px;
+        margin-right: 7px;
         background-image: ${getFileIcon(c.fileIcon)};
         background-size: contain;
         background-repeat: no-repeat;
         flex-shrink: 0;
+        opacity: 0.8;
       }
 
-      /* File containers */
+      /* ---- Directory section heading ---- */
+      .section-heading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 40px 0 18px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid ${c.border};
+        font-family: ${monoFont};
+        font-size: 15px;
+        font-weight: 700;
+        color: ${c.heading};
+      }
+      .section-heading::before {
+        content: '';
+        width: 17px; height: 17px;
+        background-image: ${getFolderIcon(c.folderIcon)};
+        background-size: contain;
+        background-repeat: no-repeat;
+        flex-shrink: 0;
+      }
+      .section-heading:first-child { margin-top: 0; }
+
+      /* ---- File cards ---- */
       .file-container {
-        margin-bottom: 24px;
+        margin-bottom: 28px;
         border: 1px solid ${c.border};
-        border-radius: 8px;
+        border-radius: 12px;
         overflow: hidden;
+        background: ${c.codeBackground};
+        box-shadow: 0 1px 2px rgba(0,0,0,${isLight ? "0.04" : "0.25"});
       }
 
       .file-header {
         background-color: ${c.headerBackground};
-        padding: 10px 16px;
+        padding: 12px 18px;
         border-bottom: 1px solid ${c.border};
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin: 0;
       }
 
       .file-path {
-        font-family: ${monoFont};
-        font-size: 13px;
-        font-weight: 600;
-        color: ${c.heading};
-      }
-
-      .file-header-right {
         display: flex;
         align-items: center;
-        gap: 12px;
-      }
-
-      .file-meta {
-        font-family: ${monoFont};
-        font-size: 12px;
-        color: ${c.textMuted};
-      }
-
-      /* Code content */
-      .file-content {
-        background-color: ${c.codeBackground};
-        margin: 0;
-        padding: 0;
-      }
-
-      .file-content pre {
-        margin: 0;
-        padding: 16px;
-        overflow-x: auto;
-      }
-
-      .file-content code {
         font-family: ${monoFont};
         font-size: 13px;
-        line-height: 1.5;
-        tab-size: 2;
+        font-weight: 650;
+        color: ${c.heading};
+      }
+      .file-path::before {
+        content: '';
+        display: inline-block;
+        width: 14px; height: 14px;
+        margin-right: 9px;
+        background-image: ${getFileIcon(c.fileIcon)};
+        background-size: contain;
+        background-repeat: no-repeat;
+        flex-shrink: 0;
+        opacity: 0.85;
       }
 
-      /* Shiki code block styling */
+      .file-header-right { display: flex; align-items: center; gap: 10px; }
+
+      .lang-badge {
+        font-family: ${monoFont};
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        color: ${c.link};
+        background: ${isLight ? c.selectionBackground : c.hoverBackground};
+      }
+
+      .file-meta { font-family: ${monoFont}; font-size: 12px; color: ${c.textMuted}; }
+
+      .file-content { background-color: ${c.codeBackground}; margin: 0; padding: 0; }
+
+      .file-content pre { margin: 0; padding: 18px 20px; overflow-x: auto; }
+      .file-content code { font-family: ${monoFont}; font-size: 12.5px; line-height: ${codeLineHeight}; tab-size: 2; }
+
       .file-content pre.shiki {
         background-color: ${c.codeBackground} !important;
-        padding: 16px;
+        padding: 18px 20px;
         margin: 0 !important;
         overflow-x: auto;
       }
-
       .file-content .shiki code {
         display: block;
-        counter-reset: line;
         font-family: ${monoFont};
-        font-size: 13px;
-        line-height: 21px;
+        font-size: 12.5px;
+        line-height: ${codeLineHeight};
         white-space: pre;
         color: ${c.foreground};
       }
+      .file-content .shiki .line { display: block; min-height: ${codeLineHeight}; }
 
-      .file-content .shiki .line {
-        display: block;
-        height: 21px;
-      }
+      /* Line numbers — table layout for clean PDF copy/paste */
+      .code-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      .code-table td { vertical-align: top; padding: 0; margin: 0; }
 
-      /* Line numbers */
-      .line-numbers .shiki .line::before {
-        counter-increment: line;
-        content: counter(line);
-        display: inline-block;
-        width: 3em;
-        margin-right: 16px;
-        padding-right: 12px;
+      .line-numbers-col {
+        width: 52px; min-width: 52px; max-width: 52px;
+        padding: 18px 0 18px 8px !important;
         text-align: right;
-        color: ${c.lineNumber};
-        user-select: none;
         border-right: 1px solid ${c.lineNumberBorder};
+        background-color: ${c.headerBackground};
+        user-select: none;
+        -webkit-user-select: none;
       }
+      .line-numbers-col .line-num {
+        display: block;
+        height: ${codeLineHeight};
+        line-height: ${codeLineHeight};
+        font-family: ${monoFont};
+        font-size: 11.5px;
+        color: ${c.lineNumber};
+        padding-right: 14px;
+      }
+
+      .code-col { padding: 0 !important; overflow-x: auto; }
+      .code-col .shiki { margin: 0 !important; padding: 18px 20px !important; }
+      .code-col .shiki code { display: block; }
+      .code-col .shiki .line { display: block; min-height: ${codeLineHeight}; line-height: ${codeLineHeight}; }
 
       /* Images */
-      .image-container {
-        padding: 24px;
-        text-align: center;
-        background-color: ${c.codeBackground};
-      }
+      .image-container { padding: 28px; text-align: center; background-color: ${c.codeBackground}; }
+      .image-container img { max-width: 100%; max-height: 600px; border-radius: 6px; }
 
-      .image-container img {
-        max-width: 100%;
-        max-height: 600px;
-        border-radius: 4px;
-      }
-
-      /* Binary files */
-      .binary-info {
-        padding: 24px;
-        text-align: center;
-        font-style: italic;
-        color: ${c.textMuted};
-        background-color: ${c.codeBackground};
-      }
+      /* Binary placeholder */
+      .binary-info { padding: 28px; text-align: center; color: ${c.textMuted}; background-color: ${c.codeBackground}; }
+      .binary-info p:first-child { font-weight: 600; color: ${c.text}; margin-bottom: 4px; }
 
       /* Footer */
       footer {
-        margin-top: 60px;
-        padding-top: 24px;
+        margin-top: 56px;
+        padding-top: 22px;
         border-top: 1px solid ${c.border};
         text-align: center;
         color: ${c.textMuted};
-        font-size: 0.875em;
+        font-size: 12.5px;
       }
+      footer a { color: ${c.link}; }
 
-      footer a {
-        color: ${c.link};
-      }
-
-      /* Print styles for PDF */
+      /* Print / PDF */
       @media print {
         html, body {
-          width: 100%;
-          height: 100%;
           margin: 0 !important;
           padding: 0 !important;
-          background-color: ${c.background} !important;
+          background-color: ${pageBg} !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-
-        .container {
-          padding: 32px !important;
-          background-color: ${c.background} !important;
-        }
-
-        .toc {
-          page-break-after: always;
-        }
-
-        .file-container {
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
-
-        .file-header {
-          page-break-after: avoid;
-          break-after: avoid;
-        }
+        .container { padding: 48px 44px !important; background-color: ${pageBg} !important; }
+        .cover { page-break-after: auto; }
+        .file-container { page-break-inside: avoid; break-inside: avoid; }
+        .file-header { page-break-after: avoid; break-after: avoid; }
+        .section-heading { page-break-after: avoid; break-after: avoid; }
       }
 
-      /* Ensure background covers entire page */
-      @page {
-        margin: 0;
-        size: auto;
-      }
+      @page { margin: 0; size: auto; }
 
       ${customCSS || ""}
     `;
@@ -647,7 +635,7 @@ export class PDFGenerator {
     let html = `
       <nav class="toc" id="table-of-contents">
         <h2>Table of Contents</h2>
-        <ul class="toc-list">
+        <ul class="toc-list toc-columns">
     `;
 
     tocItems.forEach((item) => {
@@ -655,14 +643,14 @@ export class PDFGenerator {
         // Directory with files
         html += `
           <li class="toc-directory">
-            <span>${this.escapeHtml(item.title)}</span>
+            <span>${escapeHtml(item.title)}</span>
             <ul>
         `;
 
         item.children.forEach((child) => {
           html += `
               <li class="toc-file">
-                <a href="#${this.createAnchorId(child.path)}">${this.escapeHtml(child.title)}</a>
+                <a href="#${this.createAnchorId(child.path)}">${escapeHtml(child.title)}</a>
               </li>
           `;
         });
@@ -675,7 +663,7 @@ export class PDFGenerator {
         // Single file (root level)
         html += `
           <li class="toc-file">
-            <a href="#${this.createAnchorId(item.path)}">${this.escapeHtml(item.title)}</a>
+            <a href="#${this.createAnchorId(item.path)}">${escapeHtml(item.title)}</a>
           </li>
         `;
       }
@@ -709,8 +697,8 @@ export class PDFGenerator {
       .filter((dir) => dir !== "")
       .sort((a, b) => a.localeCompare(b))
       .forEach((dir) => {
-        // Add directory heading
-        html += `<h2 id="${this.createAnchorId(dir)}">${this.escapeHtml(dir)}/</h2>`;
+        // Add directory section heading
+        html += `<h2 class="section-heading" id="${this.createAnchorId(dir)}">${escapeHtml(dir)}/</h2>`;
 
         // Add files in this directory
         filesByDirectory[dir]
@@ -736,40 +724,69 @@ export class PDFGenerator {
         ? file.processedContent.split("\n").length
         : 0;
 
+    const langBadge =
+      file.type === "code" && file.language
+        ? `<span class="lang-badge">${escapeHtml(file.language)}</span>`
+        : "";
+
     let html = `
       <article class="file-container" id="${fileId}">
         <header class="file-header">
-          <div class="file-path">${this.escapeHtml(file.path)}</div>
+          <div class="file-path">${escapeHtml(file.path)}</div>
           <div class="file-header-right">
-            <span class="file-meta">${this.formatFileSize(file.size)}${lineCount > 0 ? ` | ${lineCount} lines` : ""}</span>
+            ${langBadge}
+            <span class="file-meta">${formatFileSize(file.size)}${lineCount > 0 ? ` &middot; ${lineCount} lines` : ""}</span>
           </div>
         </header>
     `;
 
     // Generate content based on file type
     if (file.type === "code" && file.highlightedHtml) {
-      html += `
-        <div class="file-content ${lineNumbersClass}" data-file-id="${fileId}">
-          ${file.highlightedHtml}
-        </div>
-      `;
-    } else if (file.type === "image" && file.base64Content) {
+      if (this.config.style.lineNumbers && lineCount > 0) {
+        // Use table-based layout for line numbers (better for PDF copying)
+        const lineNumbersHtml = Array.from(
+          { length: lineCount },
+          (_, i) => `<span class="line-num">${i + 1}</span>`,
+        ).join("");
+
+        html += `
+          <div class="file-content" data-file-id="${fileId}">
+            <table class="code-table">
+              <tr>
+                <td class="line-numbers-col">${lineNumbersHtml}</td>
+                <td class="code-col">${file.highlightedHtml}</td>
+              </tr>
+            </table>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="file-content" data-file-id="${fileId}">
+            ${file.highlightedHtml}
+          </div>
+        `;
+      }
+    } else if (
+      file.type === "image" &&
+      file.base64Content &&
+      this.isSafeImageDataUri(file.base64Content)
+    ) {
       html += `
         <div class="image-container">
-          <img src="${file.base64Content}" alt="${this.escapeHtml(file.name)}" loading="lazy" />
+          <img src="${escapeHtml(file.base64Content)}" alt="${escapeHtml(file.name)}" loading="lazy" />
         </div>
       `;
     } else if (file.type === "binary" || file.type === "unknown") {
       html += `
         <div class="binary-info">
           <p>[Binary file]</p>
-          <p>${this.escapeHtml(file.processedContent)}</p>
+          <p>${escapeHtml(file.processedContent)}</p>
         </div>
       `;
     } else {
       html += `
         <div class="file-content ${lineNumbersClass}">
-          <pre><code>${this.escapeHtml(file.processedContent)}</code></pre>
+          <pre><code>${escapeHtml(file.processedContent)}</code></pre>
         </div>
       `;
     }
@@ -810,30 +827,15 @@ export class PDFGenerator {
   }
 
   /**
-   * Format file size in human-readable format
+   * Validate that a string is a safe base64-encoded image data URI.
+   *
+   * @remarks
+   * Guards against injection through a crafted `base64Content` (e.g. a
+   * `javascript:` URI or an SVG with embedded script). We only accept
+   * `data:image/<type>;base64,<base64>` produced by the image processor.
    */
-  private formatFileSize(bytes: number): string {
-    if (bytes === 0) return "0 Bytes";
-
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return (
-      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-    );
-  }
-
-  /**
-   * Escape HTML special characters
-   */
-  private escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  private isSafeImageDataUri(value: string): boolean {
+    return /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(value);
   }
 
   /**

@@ -63,8 +63,15 @@ export class LocalFetcher implements RepositoryFetcher {
         const gitignoreContent = await readFileAsync(gitignorePath, "utf-8");
         this.ignorePatterns = gitignoreContent
           .split("\n")
-          .filter((line) => line.trim() && !line.startsWith("#"))
-          .map((line) => line.trim());
+          .map((line) => {
+            // Strip inline comments (but not if # is escaped or in a pattern)
+            const commentIndex = line.indexOf(" #");
+            if (commentIndex > 0) {
+              line = line.substring(0, commentIndex);
+            }
+            return line.trim();
+          })
+          .filter((line) => line && !line.startsWith("#") && !line.startsWith("!"));
       }
     } catch (error) {
       logger.warn("Failed to read .gitignore file:", error);
@@ -130,8 +137,11 @@ export class LocalFetcher implements RepositoryFetcher {
     const promises = entries.map((entry) =>
       limit(async () => {
         const entryPath = path.join(dirPath, entry);
+        // Keep the canonical relative path POSIX-style ("/" separators) on every
+        // OS, so glob matching, directory grouping, and anchors are consistent
+        // across Windows/Linux/macOS.
         const entryRelativePath = relativePath
-          ? path.join(relativePath, entry)
+          ? `${relativePath}/${entry}`
           : entry;
 
         // Check if the entry should be ignored

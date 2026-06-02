@@ -67,9 +67,9 @@ repo2pdf convert <repository> [options]
 
 Options:
   -o, --output <path>      Output file path
-  -b, --branch <branch>    Repository branch
+  -b, --branch <branch>    Repository branch (default: repo's default branch)
   -t, --token <token>      Auth token for private repos
-  --theme <theme>          Syntax highlighting theme (default: github-dark)
+  --theme <theme>          Syntax highlighting theme (default: github-light)
   --no-line-numbers        Disable line numbers
   --no-page-numbers        Disable page numbers
   --no-toc                 Disable table of contents
@@ -95,7 +95,7 @@ const result = await convertRepository({
     singleFile: true,
   },
   style: {
-    theme: "github-dark",
+    theme: "github-light",
     lineNumbers: true,
     pageNumbers: true,
     includeTableOfContents: true,
@@ -112,11 +112,11 @@ See [Programmatic API](./docs/programmatic.md) for full documentation.
 
 ## Themes
 
-| Dark                    | Light             |
-| ----------------------- | ----------------- |
-| `github-dark` (default) | `github-light`    |
-| `dracula`               | `solarized-light` |
-| `nord`                  |                   |
+| Dark                    | Light                      |
+| ----------------------- | -------------------------- |
+| `github-dark`           | `github-light` (default)   |
+| `dracula`               | `solarized-light`          |
+| `nord`                  |                            |
 | `monokai`               |                   |
 | `one-dark-pro`          |                   |
 | `tokyo-night`           |                   |

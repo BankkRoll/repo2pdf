@@ -8,6 +8,7 @@ import type { RepoFile } from "../types/file.types";
 import type { RepositoryFetcher } from "./fetcher.interface";
 import type { RepositoryOptions } from "../types/config.types";
 import { logger } from "../utils/logger";
+import { RetryHandler } from "../utils/retry-handler";
 import pLimit from "p-limit";
 
 /**
@@ -32,7 +33,6 @@ export class GitLabFetcher implements RepositoryFetcher {
   public async initialize(options: RepositoryOptions): Promise<void> {
     this.options = options;
     this.token = options.token;
-    this.branch = options.branch || "main";
 
     // Parse GitLab URL to extract project ID
     const urlMatch = options.url.match(/gitlab\.com\/([^/]+\/[^/]+)/);
@@ -43,6 +43,9 @@ export class GitLabFetcher implements RepositoryFetcher {
     // URL encode the project path
     const projectPath = urlMatch[1];
     this.projectId = encodeURIComponent(projectPath);
+
+    // Resolve the branch: use the explicit branch, else the project's default.
+    this.branch = options.branch || (await this.resolveDefaultBranch());
 
     // Check rate limit
     try {
@@ -66,6 +69,24 @@ export class GitLabFetcher implements RepositoryFetcher {
       }
     } catch (error) {
       logger.warn("Failed to check GitLab API rate limit:", error);
+    }
+  }
+
+  /**
+   * Resolve the project's default branch, falling back to "main".
+   */
+  private async resolveDefaultBranch(): Promise<string> {
+    try {
+      const data = await this.makeApiRequest(
+        `/projects/${this.projectId}`,
+      ).then((res) => res.json());
+      return data?.default_branch || "main";
+    } catch (error) {
+      logger.warn(
+        "Could not determine GitLab default branch, falling back to 'main':",
+        error,
+      );
+      return "main";
     }
   }
 
@@ -232,7 +253,7 @@ export class GitLabFetcher implements RepositoryFetcher {
       headers["PRIVATE-TOKEN"] = this.token;
     }
 
-    const response = await fetch(url, { headers });
+    const response = await RetryHandler.withRetry(() => fetch(url, { headers }));
 
     if (response.status === 429) {
       // Rate limit exceeded
@@ -261,15 +282,20 @@ export class GitLabFetcher implements RepositoryFetcher {
   /**
    * Fetch all pages of a paginated API endpoint
    */
-  private async fetchAllPages(endpoint: string): Promise<any[]> {
+  private async fetchAllPages(
+    endpoint: string,
+  ): Promise<Array<{ type: string; path: string }>> {
     let page = 1;
     let hasMorePages = true;
-    const allItems: any[] = [];
+    const allItems: Array<{ type: string; path: string }> = [];
 
     while (hasMorePages) {
       const pageUrl = `${endpoint}&page=${page}`;
       const response = await this.makeApiRequest(pageUrl);
-      const items = await response.json();
+      const items = (await response.json()) as Array<{
+        type: string;
+        path: string;
+      }>;
 
       if (Array.isArray(items) && items.length > 0) {
         allItems.push(...items);

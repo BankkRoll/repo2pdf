@@ -32,17 +32,11 @@ export class CacheManager {
 
   /**
    * Initialize cache directory
+   * @throws Error if cache directory cannot be created and caching is enabled
    */
   private initializeCache(): void {
-    try {
-      if (!fs.existsSync(this.cacheDir)) {
-        fs.mkdirSync(this.cacheDir, { recursive: true });
-      }
-    } catch (error) {
-      logger.warn(
-        `Failed to initialize cache directory: ${(error as Error).message}`,
-      );
-      this.enabled = false;
+    if (!fs.existsSync(this.cacheDir)) {
+      fs.mkdirSync(this.cacheDir, { recursive: true });
     }
   }
 
@@ -97,28 +91,25 @@ export class CacheManager {
   public isCacheValid(url: string, branch: string): boolean {
     if (!this.enabled) return false;
 
-    try {
-      const key = this.generateCacheKey(url, branch);
-      const metaFilePath = this.getCacheMetaFilePath(key);
+    const key = this.generateCacheKey(url, branch);
+    const metaFilePath = this.getCacheMetaFilePath(key);
 
-      if (!fs.existsSync(metaFilePath)) {
-        return false;
-      }
-
-      const metaData = JSON.parse(fs.readFileSync(metaFilePath, "utf-8"));
-      const now = Date.now();
-
-      // Check if cache has expired
-      if (now - metaData.timestamp > this.ttl) {
-        logger.debug(`Cache expired for ${url}#${branch}`);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      logger.warn(`Error checking cache validity: ${(error as Error).message}`);
+    if (!fs.existsSync(metaFilePath)) {
       return false;
     }
+
+    const metaData = JSON.parse(fs.readFileSync(metaFilePath, "utf-8")) as {
+      timestamp: number;
+    };
+    const now = Date.now();
+
+    // Check if cache has expired
+    if (now - metaData.timestamp > this.ttl) {
+      logger.debug(`Cache expired for ${url}#${branch}`);
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -127,34 +118,34 @@ export class CacheManager {
   public getCachedFiles(url: string, branch: string): RepoFile[] | null {
     if (!this.enabled) return null;
 
-    try {
-      const key = this.generateCacheKey(url, branch);
-      const cacheFilePath = this.getCacheFilePath(key);
+    const key = this.generateCacheKey(url, branch);
+    const cacheFilePath = this.getCacheFilePath(key);
 
-      if (!this.isCacheValid(url, branch) || !fs.existsSync(cacheFilePath)) {
-        return null;
-      }
-
-      const cachedData = JSON.parse(fs.readFileSync(cacheFilePath, "utf-8"));
-
-      // Convert Buffer data back to Buffer objects
-      const files: RepoFile[] = cachedData.map((file: any) => {
-        if (
-          file.content &&
-          file.type !== "code" &&
-          file.content._type === "Buffer"
-        ) {
-          file.content = Buffer.from(file.content.data);
-        }
-        return file;
-      });
-
-      logger.info(`Using cached repository data for ${url}#${branch}`);
-      return files;
-    } catch (error) {
-      logger.warn(`Error reading cache: ${(error as Error).message}`);
+    if (!this.isCacheValid(url, branch) || !fs.existsSync(cacheFilePath)) {
       return null;
     }
+
+    const cachedData = JSON.parse(
+      fs.readFileSync(cacheFilePath, "utf-8"),
+    ) as Array<
+      RepoFile & { content?: { _type: string; data: number[] } | null }
+    >;
+
+    // Convert Buffer data back to Buffer objects
+    const files: RepoFile[] = cachedData.map((file) => {
+      if (
+        file.content &&
+        typeof file.content === "object" &&
+        "_type" in file.content &&
+        file.content._type === "Buffer"
+      ) {
+        return { ...file, content: Buffer.from(file.content.data) };
+      }
+      return file as RepoFile;
+    });
+
+    logger.info(`Using cached repository data for ${url}#${branch}`);
+    return files;
   }
 
   /**
@@ -163,80 +154,68 @@ export class CacheManager {
   public cacheFiles(url: string, branch: string, files: RepoFile[]): void {
     if (!this.enabled) return;
 
-    try {
-      const key = this.generateCacheKey(url, branch);
-      const cacheFilePath = this.getCacheFilePath(key);
-      const metaFilePath = this.getCacheMetaFilePath(key);
+    const key = this.generateCacheKey(url, branch);
+    const cacheFilePath = this.getCacheFilePath(key);
+    const metaFilePath = this.getCacheMetaFilePath(key);
 
-      // Prepare files for serialization
-      const serializedFiles = files.map((file) => {
-        // Clone the file to avoid modifying the original
-        const clonedFile = { ...file };
+    // Prepare files for serialization
+    const serializedFiles = files.map((file) => {
+      // Clone the file to avoid modifying the original
+      const clonedFile = { ...file };
 
-        // For binary files, we don't need to cache the content
-        if (file.type === "binary") {
-          clonedFile.content = null;
-        }
+      // For binary files, we don't need to cache the content
+      if (file.type === "binary") {
+        clonedFile.content = null;
+      }
 
-        return clonedFile;
-      });
+      return clonedFile;
+    });
 
-      // Write files to cache
-      fs.writeFileSync(cacheFilePath, JSON.stringify(serializedFiles));
+    // Write files to cache
+    fs.writeFileSync(cacheFilePath, JSON.stringify(serializedFiles));
 
-      // Write metadata
-      const metaData = {
-        url,
-        branch,
-        timestamp: Date.now(),
-        fileCount: files.length,
-      };
-      fs.writeFileSync(metaFilePath, JSON.stringify(metaData));
+    // Write metadata
+    const metaData = {
+      url,
+      branch,
+      timestamp: Date.now(),
+      fileCount: files.length,
+    };
+    fs.writeFileSync(metaFilePath, JSON.stringify(metaData));
 
-      logger.info(`Cached repository data for ${url}#${branch}`);
-    } catch (error) {
-      logger.warn(`Error writing cache: ${(error as Error).message}`);
-    }
+    logger.info(`Cached repository data for ${url}#${branch}`);
   }
 
   /**
    * Clear cache for a specific repository
    */
   public clearCache(url: string, branch: string): void {
-    try {
-      const key = this.generateCacheKey(url, branch);
-      const cacheFilePath = this.getCacheFilePath(key);
-      const metaFilePath = this.getCacheMetaFilePath(key);
+    const key = this.generateCacheKey(url, branch);
+    const cacheFilePath = this.getCacheFilePath(key);
+    const metaFilePath = this.getCacheMetaFilePath(key);
 
-      if (fs.existsSync(cacheFilePath)) {
-        fs.unlinkSync(cacheFilePath);
-      }
-
-      if (fs.existsSync(metaFilePath)) {
-        fs.unlinkSync(metaFilePath);
-      }
-
-      logger.info(`Cleared cache for ${url}#${branch}`);
-    } catch (error) {
-      logger.warn(`Error clearing cache: ${(error as Error).message}`);
+    if (fs.existsSync(cacheFilePath)) {
+      fs.unlinkSync(cacheFilePath);
     }
+
+    if (fs.existsSync(metaFilePath)) {
+      fs.unlinkSync(metaFilePath);
+    }
+
+    logger.info(`Cleared cache for ${url}#${branch}`);
   }
 
   /**
    * Clear all cache
    */
   public clearAllCache(): void {
-    try {
-      const files = fs.readdirSync(this.cacheDir);
+    const files = fs.readdirSync(this.cacheDir);
 
-      for (const file of files) {
-        fs.unlinkSync(path.join(this.cacheDir, file));
-      }
-
-      logger.info("Cleared all cache");
-    } catch (error) {
-      logger.warn(`Error clearing all cache: ${(error as Error).message}`);
+    for (const file of files) {
+      fs.unlinkSync(path.join(this.cacheDir, file));
     }
+
+    logger.info("Cleared all cache");
   }
 
   /**
@@ -255,39 +234,7 @@ export class CacheManager {
       timestamp: number;
     }>;
   } {
-    try {
-      const files = fs.readdirSync(this.cacheDir);
-      const metaFiles = files.filter((file) => file.endsWith(".meta.json"));
-      const repositories = [];
-      let totalSize = 0;
-
-      for (const metaFile of metaFiles) {
-        const metaFilePath = path.join(this.cacheDir, metaFile);
-        const cacheFilePath = path.join(
-          this.cacheDir,
-          metaFile.replace(".meta.json", ".json"),
-        );
-
-        const metaData = JSON.parse(fs.readFileSync(metaFilePath, "utf-8"));
-
-        if (fs.existsSync(cacheFilePath)) {
-          const stats = fs.statSync(cacheFilePath);
-          totalSize += stats.size;
-        }
-
-        repositories.push(metaData);
-      }
-
-      return {
-        enabled: this.enabled,
-        cacheDir: this.cacheDir,
-        ttl: this.ttl,
-        cacheCount: repositories.length,
-        totalSize,
-        repositories,
-      };
-    } catch (error) {
-      logger.warn(`Error getting cache stats: ${(error as Error).message}`);
+    if (!fs.existsSync(this.cacheDir)) {
       return {
         enabled: this.enabled,
         cacheDir: this.cacheDir,
@@ -297,5 +244,46 @@ export class CacheManager {
         repositories: [],
       };
     }
+
+    const files = fs.readdirSync(this.cacheDir);
+    const metaFiles = files.filter((file) => file.endsWith(".meta.json"));
+    const repositories: Array<{
+      url: string;
+      branch: string;
+      fileCount: number;
+      timestamp: number;
+    }> = [];
+    let totalSize = 0;
+
+    for (const metaFile of metaFiles) {
+      const metaFilePath = path.join(this.cacheDir, metaFile);
+      const cacheFilePath = path.join(
+        this.cacheDir,
+        metaFile.replace(".meta.json", ".json"),
+      );
+
+      const metaData = JSON.parse(fs.readFileSync(metaFilePath, "utf-8")) as {
+        url: string;
+        branch: string;
+        fileCount: number;
+        timestamp: number;
+      };
+
+      if (fs.existsSync(cacheFilePath)) {
+        const stats = fs.statSync(cacheFilePath);
+        totalSize += stats.size;
+      }
+
+      repositories.push(metaData);
+    }
+
+    return {
+      enabled: this.enabled,
+      cacheDir: this.cacheDir,
+      ttl: this.ttl,
+      cacheCount: repositories.length,
+      totalSize,
+      repositories,
+    };
   }
 }

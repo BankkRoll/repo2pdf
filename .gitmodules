@@ -1,0 +1,32 @@
+[submodule "tests/fixtures/test-repos/chalk"]
+	path = tests/fixtures/test-repos/chalk
+	url = https://github.com/chalk/chalk
+	branch = main
+[submodule "tests/fixtures/test-repos/is"]
+	path = tests/fixtures/test-repos/is
+	url = https://github.com/sindresorhus/is
+	branch = main
+[submodule "tests/fixtures/test-repos/commander.js"]
+	path = tests/fixtures/test-repos/commander.js
+	url = https://github.com/tj/commander.js
+	branch = master
+[submodule "tests/fixtures/test-repos/express"]
+	path = tests/fixtures/test-repos/express
+	url = https://github.com/expressjs/express
+	branch = master
+[submodule "tests/fixtures/test-repos/freeCodeCamp"]
+	path = tests/fixtures/test-repos/freeCodeCamp
+	url = https://github.com/freeCodeCamp/freeCodeCamp
+	branch = main
+[submodule "tests/fixtures/test-repos/vscode"]
+	path = tests/fixtures/test-repos/vscode
+	url = https://github.com/microsoft/vscode
+	branch = main
+[submodule "tests/fixtures/test-repos/rust"]
+	path = tests/fixtures/test-repos/rust
+	url = https://github.com/rust-lang/rust
+	branch = main
+[submodule "tests/fixtures/test-repos/go"]
+	path = tests/fixtures/test-repos/go
+	url = https://github.com/golang/go
+	branch = master

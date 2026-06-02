@@ -30,7 +30,7 @@ export const defaultConfig: Config = {
 
   // Style settings
   style: {
-    theme: "github-dark",
+    theme: "github-light",
     fontSize: "12px",
     fontFamily:
       "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",

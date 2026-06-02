@@ -4,43 +4,48 @@ import { logger } from "../utils/logger";
 import { CodeProcessor } from "./code-processor";
 import { ImageProcessor } from "./image-processor";
 import { BinaryProcessor } from "./binary-processor";
+import { organizeFilesByDirectory } from "../utils/file-utils";
+import { HookPoint } from "../plugins/plugin-manager";
+import { noopPluginRunner, type PluginRunner } from "../plugins/plugin-runner";
 import pLimit from "p-limit";
 import { minimatch } from "minimatch";
 
 /**
- * Base file processor that delegates to specific processors based on file type
+ * Base file processor that delegates to specific processors based on file type.
  */
 export class FileProcessor {
   private codeProcessor: CodeProcessor;
   private imageProcessor: ImageProcessor;
   private binaryProcessor: BinaryProcessor;
   private config: Config;
+  private plugins: PluginRunner;
 
-  constructor(config: Config) {
+  constructor(config: Config, plugins: PluginRunner = noopPluginRunner) {
     this.config = config;
-    this.codeProcessor = new CodeProcessor(config);
+    this.plugins = plugins;
+    this.codeProcessor = new CodeProcessor(config, plugins);
     this.imageProcessor = new ImageProcessor(config);
     this.binaryProcessor = new BinaryProcessor(config);
   }
 
   /**
-   * Process a list of files in parallel
+   * Process a list of files in parallel (bounded by maxConcurrency).
    */
   public async processFiles(files: RepoFile[]): Promise<ProcessedFile[]> {
     const { processing } = this.config;
     const limit = pLimit(processing.maxConcurrency);
 
-    // Filter files based on ignore patterns
-    const filteredFiles = files.filter((file) => !this.shouldIgnore(file.path));
+    // Filter files based on ignore patterns + plugin FILTER_FILE hooks.
+    const filteredFiles = await this.filterFiles(files);
 
-    // Process files in parallel with concurrency limit
     const processPromises = filteredFiles.map((file) =>
       limit(async () => {
         try {
           return await this.processFile(file);
         } catch (error) {
           logger.error(`Error processing file ${file.path}:`, error);
-          // Return a minimal processed file on error
+          // Return a minimal processed file on error so one bad file doesn't
+          // abort the whole run.
           return {
             ...file,
             processedContent: `Error processing file: ${(error as Error).message}`,
@@ -49,12 +54,40 @@ export class FileProcessor {
       }),
     );
 
-    const processedFiles = await Promise.all(processPromises);
-    return processedFiles;
+    return Promise.all(processPromises);
   }
 
   /**
-   * Process a single file based on its type
+   * Apply ignore rules and the FILTER_FILE plugin hook to a file list.
+   */
+  private async filterFiles(files: RepoFile[]): Promise<RepoFile[]> {
+    const hasFilterHook = this.plugins.hasHookHandlers(HookPoint.FILTER_FILE);
+    const result: RepoFile[] = [];
+
+    for (const file of files) {
+      if (this.shouldIgnore(file)) {
+        continue;
+      }
+      if (hasFilterHook) {
+        const include = await this.plugins.executeHook(
+          HookPoint.FILTER_FILE,
+          file,
+          this.config,
+        );
+        // The hook chains the file as the first arg; a boolean result means
+        // "should include". Anything non-false keeps the file.
+        if (include === false) {
+          continue;
+        }
+      }
+      result.push(file);
+    }
+
+    return result;
+  }
+
+  /**
+   * Process a single file based on its type.
    */
   public async processFile(file: RepoFile): Promise<ProcessedFile> {
     switch (file.type) {
@@ -71,12 +104,18 @@ export class FileProcessor {
   }
 
   /**
-   * Check if a file should be ignored based on ignore patterns
+   * Determine whether a file should be excluded based on hidden-file rules,
+   * binary inclusion, and ignore glob patterns.
    */
-  private shouldIgnore(filePath: string): boolean {
-    const { ignorePatterns, includeHiddenFiles } = this.config.processing;
+  private shouldIgnore(file: RepoFile): boolean {
+    const {
+      ignorePatterns,
+      includeHiddenFiles,
+      includeBinaryFiles,
+    } = this.config.processing;
+    const filePath = file.path;
 
-    // Check for hidden files (starting with .)
+    // Hidden files (dotfiles anywhere in the path).
     if (
       !includeHiddenFiles &&
       (filePath.startsWith(".") || filePath.includes("/."))
@@ -84,7 +123,12 @@ export class FileProcessor {
       return true;
     }
 
-    // Check against ignore patterns
+    // Binary/image/unknown files are excluded unless explicitly included.
+    if (!includeBinaryFiles && file.type !== "code") {
+      return true;
+    }
+
+    // Ignore glob patterns.
     if (ignorePatterns) {
       for (const pattern of ignorePatterns) {
         if (minimatch(filePath, pattern, { dot: true })) {
@@ -97,25 +141,11 @@ export class FileProcessor {
   }
 
   /**
-   * Organize processed files into a directory structure
+   * Organize processed files into a directory-keyed structure.
    */
   public organizeFilesByDirectory(
     files: ProcessedFile[],
   ): Record<string, ProcessedFile[]> {
-    const directories: Record<string, ProcessedFile[]> = {};
-
-    for (const file of files) {
-      const dirPath = file.path.includes("/")
-        ? file.path.substring(0, file.path.lastIndexOf("/"))
-        : "";
-
-      if (!directories[dirPath]) {
-        directories[dirPath] = [];
-      }
-
-      directories[dirPath].push(file);
-    }
-
-    return directories;
+    return organizeFilesByDirectory(files);
   }
 }

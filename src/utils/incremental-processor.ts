@@ -29,16 +29,8 @@ export class IncrementalProcessor {
    * Initialize temporary directory
    */
   private initializeTempDir(): void {
-    try {
-      if (!fs.existsSync(this.tempDir)) {
-        fs.mkdirSync(this.tempDir, { recursive: true });
-      }
-    } catch (error) {
-      logger.warn(
-        `Failed to initialize temporary directory: ${(error as Error).message}`,
-      );
-      // Fall back to in-memory processing if temp directory can't be created
-      this.tempDir = "";
+    if (!fs.existsSync(this.tempDir)) {
+      fs.mkdirSync(this.tempDir, { recursive: true });
     }
   }
 
@@ -74,7 +66,7 @@ export class IncrementalProcessor {
       );
 
       // Process the chunk
-      const processedChunk = await this.processChunk(chunk, i);
+      const processedChunk = await this.processChunk(chunk);
 
       // Store the chunk reference
       const chunkId = this.saveChunk(processedChunk, i);
@@ -104,124 +96,104 @@ export class IncrementalProcessor {
   /**
    * Process a chunk of files
    */
-  private async processChunk(
-    chunk: RepoFile[],
-    chunkIndex: number,
-  ): Promise<ProcessedFile[]> {
-    try {
-      return await this.fileProcessor.processFiles(chunk);
-    } catch (error) {
-      logger.error(
-        `Error processing chunk ${chunkIndex}: ${(error as Error).message}`,
-      );
-      // Return empty array for this chunk to continue processing
-      return [];
-    }
+  private async processChunk(chunk: RepoFile[]): Promise<ProcessedFile[]> {
+    return this.fileProcessor.processFiles(chunk);
   }
 
   /**
    * Save a processed chunk to disk
    */
   private saveChunk(chunk: ProcessedFile[], chunkIndex: number): string {
-    if (!this.tempDir) return "";
+    // Generate a unique ID for this chunk
+    const chunkId = `chunk-${chunkIndex}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+    const chunkPath = path.join(this.tempDir, `${chunkId}.json`);
 
-    try {
-      // Generate a unique ID for this chunk
-      const chunkId = `chunk-${chunkIndex}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
-      const chunkPath = path.join(this.tempDir, `${chunkId}.json`);
+    // Prepare chunk for serialization
+    const serializedChunk = chunk.map((file) => {
+      // For binary files, we don't need to save the content
+      if (file.type === "binary") {
+        return { ...file, content: null };
+      }
 
-      // Prepare chunk for serialization
-      const serializedChunk = chunk.map((file) => {
-        // Clone the file to avoid modifying the original
-        const clonedFile = { ...file };
-
-        // For binary files, we don't need to save the content
-        if (file.type === "binary") {
-          clonedFile.content = null;
-        }
-
-        // For images, convert Buffer to serializable format
-        if (file.type === "image" && file.content instanceof Buffer) {
-          (clonedFile as any).content = {
-            _type: "Buffer",
+      // For images, convert Buffer to serializable format
+      if (file.type === "image" && file.content instanceof Buffer) {
+        return {
+          ...file,
+          content: {
+            _type: "Buffer" as const,
             data: Array.from(file.content),
-          };
-        }
+          },
+        };
+      }
 
-        return clonedFile;
-      });
+      return file;
+    });
 
-      // Write chunk to disk
-      fs.writeFileSync(chunkPath, JSON.stringify(serializedChunk));
+    // Write chunk to disk
+    fs.writeFileSync(chunkPath, JSON.stringify(serializedChunk));
 
-      return chunkId;
-    } catch (error) {
-      logger.warn(
-        `Failed to save chunk ${chunkIndex} to disk: ${(error as Error).message}`,
-      );
-      return "";
-    }
+    return chunkId;
   }
 
   /**
    * Load a processed chunk from disk
    */
   private loadChunk(chunkId: string): ProcessedFile[] {
-    if (!this.tempDir || !chunkId) return [];
-
-    try {
-      const chunkPath = path.join(this.tempDir, `${chunkId}.json`);
-
-      if (!fs.existsSync(chunkPath)) {
-        logger.warn(`Chunk file not found: ${chunkPath}`);
-        return [];
-      }
-
-      const serializedChunk = JSON.parse(fs.readFileSync(chunkPath, "utf-8"));
-
-      // Convert serialized data back to proper format
-      const chunk: ProcessedFile[] = serializedChunk.map((file: any) => {
-        // Convert Buffer data back to Buffer objects
-        if (file.content && file.content._type === "Buffer") {
-          file.content = Buffer.from(file.content.data);
-        }
-        return file;
-      });
-
-      return chunk;
-    } catch (error) {
-      logger.warn(
-        `Failed to load chunk ${chunkId} from disk: ${(error as Error).message}`,
-      );
-      return [];
+    if (!chunkId) {
+      throw new Error("Chunk ID is required");
     }
+
+    const chunkPath = path.join(this.tempDir, `${chunkId}.json`);
+
+    if (!fs.existsSync(chunkPath)) {
+      throw new Error(`Chunk file not found: ${chunkPath}`);
+    }
+
+    const serializedChunk = JSON.parse(
+      fs.readFileSync(chunkPath, "utf-8"),
+    ) as Array<
+      ProcessedFile & {
+        content?: { _type: string; data: number[] } | string | null;
+      }
+    >;
+
+    // Convert serialized data back to proper format
+    return serializedChunk.map((file) => {
+      // Convert Buffer data back to Buffer objects
+      if (
+        file.content &&
+        typeof file.content === "object" &&
+        "_type" in file.content &&
+        file.content._type === "Buffer"
+      ) {
+        return {
+          ...file,
+          content: Buffer.from(file.content.data),
+        } as ProcessedFile;
+      }
+      return file as ProcessedFile;
+    });
   }
 
   /**
    * Clean up temporary files
    */
   public cleanup(): void {
-    if (!this.tempDir) return;
-
-    try {
-      for (const chunkId of this.processedChunks) {
-        const chunkPath = path.join(this.tempDir, `${chunkId}.json`);
-        if (fs.existsSync(chunkPath)) {
-          fs.unlinkSync(chunkPath);
-        }
+    for (const chunkId of this.processedChunks) {
+      const chunkPath = path.join(this.tempDir, `${chunkId}.json`);
+      if (fs.existsSync(chunkPath)) {
+        fs.unlinkSync(chunkPath);
       }
+    }
 
-      // Try to remove the temp directory if it's empty
+    // Try to remove the temp directory if it's empty
+    if (fs.existsSync(this.tempDir)) {
       const files = fs.readdirSync(this.tempDir);
       if (files.length === 0) {
         fs.rmdirSync(this.tempDir);
       }
-
-      this.processedChunks = [];
-    } catch (error) {
-      logger.warn(
-        `Error cleaning up temporary files: ${(error as Error).message}`,
-      );
     }
+
+    this.processedChunks = [];
   }
 }

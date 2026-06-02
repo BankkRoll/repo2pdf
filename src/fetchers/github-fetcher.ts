@@ -42,7 +42,6 @@ export class GitHubFetcher implements RepositoryFetcher {
 
     this.owner = urlMatch[1];
     this.repo = urlMatch[2].replace(".git", "");
-    this.branch = options.branch || "main";
 
     // Initialize Octokit with token if provided
     if (options.token) {
@@ -52,6 +51,9 @@ export class GitHubFetcher implements RepositoryFetcher {
     } else {
       this.octokit = new Octokit();
     }
+
+    // Resolve the branch: use the explicit branch, else the repo's default.
+    this.branch = options.branch || (await this.resolveDefaultBranch());
 
     // Check rate limit
     try {
@@ -67,6 +69,25 @@ export class GitHubFetcher implements RepositoryFetcher {
       }
     } catch (error) {
       logger.warn("Failed to check GitHub API rate limit:", error);
+    }
+  }
+
+  /**
+   * Resolve the repository's default branch, falling back to "main".
+   */
+  private async resolveDefaultBranch(): Promise<string> {
+    try {
+      const { data } = await this.octokit.repos.get({
+        owner: this.owner,
+        repo: this.repo,
+      });
+      return data.default_branch || "main";
+    } catch (error) {
+      logger.warn(
+        "Could not determine GitHub default branch, falling back to 'main':",
+        error,
+      );
+      return "main";
     }
   }
 
@@ -92,8 +113,9 @@ export class GitHubFetcher implements RepositoryFetcher {
           ref: `heads/${this.branch}`,
         });
         refData = response.data;
-      } catch (error: any) {
-        if (error.status === 404) {
+      } catch (error) {
+        const apiError = error as { status?: number; message?: string };
+        if (apiError.status === 404) {
           // Try to get available branches
           let branchHint = "";
           try {
@@ -151,24 +173,25 @@ export class GitHubFetcher implements RepositoryFetcher {
 
       await Promise.all(promises);
       return files;
-    } catch (error: any) {
+    } catch (error) {
+      const apiError = error as { status?: number; message?: string };
       // Re-throw our custom errors as-is
-      if (error.message && !error.status) {
+      if (apiError.message && !apiError.status) {
         throw error;
       }
       // Handle API errors
-      if (error.status === 403 && error.message?.includes("rate limit")) {
+      if (apiError.status === 403 && apiError.message?.includes("rate limit")) {
         const resetDate = new Date(this.rateLimitReset * 1000);
         throw new Error(
           `GitHub API rate limit exceeded. Resets at ${resetDate.toLocaleTimeString()}. Use --token for higher limits.`,
         );
       }
-      if (error.status === 401) {
+      if (apiError.status === 401) {
         throw new Error(`Authentication failed. Check your token is valid.`);
       }
       logger.debug("Error fetching repository structure:", error);
       throw new Error(
-        `Failed to fetch repository: ${error.message || "Unknown error"}`,
+        `Failed to fetch repository: ${apiError.message || "Unknown error"}`,
       );
     }
   }

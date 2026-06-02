@@ -8,6 +8,7 @@ import type { RepoFile } from "../types/file.types";
 import type { RepositoryFetcher } from "./fetcher.interface";
 import type { RepositoryOptions } from "../types/config.types";
 import { logger } from "../utils/logger";
+import { RetryHandler } from "../utils/retry-handler";
 import pLimit from "p-limit";
 
 /**
@@ -31,7 +32,6 @@ export class BitbucketFetcher implements RepositoryFetcher {
   public async initialize(options: RepositoryOptions): Promise<void> {
     this.options = options;
     this.token = options.token;
-    this.branch = options.branch || "main";
 
     // Parse Bitbucket URL to extract workspace and repo slug
     const urlMatch = options.url.match(/bitbucket\.org\/([^/]+)\/([^/]+)/);
@@ -41,6 +41,28 @@ export class BitbucketFetcher implements RepositoryFetcher {
 
     this.workspace = urlMatch[1];
     this.repoSlug = urlMatch[2].replace(".git", "");
+
+    // Resolve the branch: use the explicit branch, else the repo's default.
+    this.branch = options.branch || (await this.resolveDefaultBranch());
+  }
+
+  /**
+   * Resolve the repository's default branch, falling back to "main".
+   */
+  private async resolveDefaultBranch(): Promise<string> {
+    try {
+      const endpoint = `/repositories/${this.workspace}/${this.repoSlug}`;
+      const data = await this.makeApiRequest(endpoint).then((res) =>
+        res.json(),
+      );
+      return data?.mainbranch?.name || "main";
+    } catch (error) {
+      logger.warn(
+        "Could not determine Bitbucket default branch, falling back to 'main':",
+        error,
+      );
+      return "main";
+    }
   }
 
   /**
@@ -238,11 +260,18 @@ export class BitbucketFetcher implements RepositoryFetcher {
     };
 
     if (this.token) {
-      // Bitbucket uses Basic Auth with app passwords
-      headers["Authorization"] = `Bearer ${this.token}`;
+      // Bitbucket supports two token styles. Classic app passwords use Basic
+      // auth in the form `username:app_password`; newer workspace/access tokens
+      // use Bearer auth. Detect which the user passed by the presence of ':'.
+      if (this.token.includes(":")) {
+        const encoded = Buffer.from(this.token).toString("base64");
+        headers["Authorization"] = `Basic ${encoded}`;
+      } else {
+        headers["Authorization"] = `Bearer ${this.token}`;
+      }
     }
 
-    const response = await fetch(url, { headers });
+    const response = await RetryHandler.withRetry(() => fetch(url, { headers }));
 
     if (response.status === 429) {
       // Rate limit exceeded

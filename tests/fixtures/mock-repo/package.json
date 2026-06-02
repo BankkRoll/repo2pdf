@@ -1,0 +1,15 @@
+{
+  "name": "mock-repo",
+  "version": "1.0.0",
+  "description": "Mock repository for testing repo2pdf",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsc"
+  },
+  "keywords": [
+    "test",
+    "mock"
+  ],
+  "license": "MIT"
+}
