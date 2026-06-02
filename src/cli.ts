@@ -746,8 +746,3 @@ program.action(() => {
 
 // Parse arguments
 program.parse(process.argv);
-
-// If no arguments, show banner
-if (process.argv.length === 2) {
-  showBanner();
-}

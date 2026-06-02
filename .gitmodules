@@ -30,3 +30,11 @@
 	path = tests/fixtures/test-repos/go
 	url = https://github.com/golang/go
 	branch = master
+[submodule "tests/fixtures/test-repos/homebrew-core"]
+	path = tests/fixtures/test-repos/homebrew-core
+	url = https://github.com/Homebrew/homebrew-core
+	branch = main
+[submodule "tests/fixtures/test-repos/tensorflow"]
+	path = tests/fixtures/test-repos/tensorflow
+	url = https://github.com/tensorflow/tensorflow
+	branch = master

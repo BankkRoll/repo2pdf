@@ -253,30 +253,31 @@ export class GitLabFetcher implements RepositoryFetcher {
       headers["PRIVATE-TOKEN"] = this.token;
     }
 
-    const response = await RetryHandler.withRetry(() => fetch(url, { headers }));
+    // RetryHandler owns retry behavior (including 429/5xx). The throw on a
+    // non-ok response happens inside the retried function so its status code is
+    // surfaced in the thrown message and matched by RetryHandler.retryableErrors.
+    return RetryHandler.withRetry(async () => {
+      const response = await fetch(url, { headers });
 
-    if (response.status === 429) {
-      // Rate limit exceeded
-      const retryAfter = response.headers.get("Retry-After");
-      const waitTime = retryAfter
-        ? Number.parseInt(retryAfter, 10) * 1000
-        : 60000;
+      if (!response.ok) {
+        const errorText = await response.text();
+        // Avoid leaking the raw API body (which can echo the token on 401/403);
+        // surface only a public message field if one is present.
+        const safe = (() => {
+          try {
+            const j = JSON.parse(errorText);
+            return j?.message ?? j?.error;
+          } catch {
+            return undefined;
+          }
+        })();
+        throw new Error(
+          `GitLab API error (${response.status}): ${safe ?? "request failed"}`,
+        );
+      }
 
-      logger.warn(
-        `GitLab API rate limit exceeded. Waiting for ${waitTime / 1000} seconds...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
-
-      // Retry the request
-      return this.makeApiRequest(endpoint);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`GitLab API error (${response.status}): ${errorText}`);
-    }
-
-    return response;
+      return response;
+    });
   }
 
   /**

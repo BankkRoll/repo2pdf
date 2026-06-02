@@ -99,13 +99,6 @@ const TEST_REPOSITORIES = [
     size: "large",
     languages: ["go", "assembly", "bash"],
   },
-  {
-    name: "linux",
-    url: "https://github.com/torvalds/linux",
-    description: "MASSIVE - Linux kernel - C, Assembly, Makefile",
-    size: "massive",
-    languages: ["c", "assembly", "makefile", "bash"],
-  },
 
   // Multi-language repos
   {
@@ -131,10 +124,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 function isRegisteredSubmodule(repoPath: string): boolean {
   const gitmodules = path.join(REPO_ROOT, ".gitmodules");
   if (!fs.existsSync(gitmodules)) return false;
-  const rel = path
-    .relative(REPO_ROOT, repoPath)
-    .split(path.sep)
-    .join("/");
+  const rel = path.relative(REPO_ROOT, repoPath).split(path.sep).join("/");
   return fs.readFileSync(gitmodules, "utf8").includes(`path = ${rel}`);
 }
 
@@ -175,10 +165,7 @@ async function cloneRepo(
   try {
     if (isRegisteredSubmodule(repoPath)) {
       // Initialise/checkout the submodule at its pinned commit (full history).
-      const rel = path
-        .relative(REPO_ROOT, repoPath)
-        .split(path.sep)
-        .join("/");
+      const rel = path.relative(REPO_ROOT, repoPath).split(path.sep).join("/");
       console.log(`  (git submodule — checking out pinned commit)`);
       await execAsync(`git submodule update --init -- "${rel}"`, {
         cwd: REPO_ROOT,

@@ -38,12 +38,6 @@ export interface RepoFile {
 export interface ProcessedFile extends RepoFile {
   /** The content after processing (comments removed, etc.) */
   processedContent: string;
-  /** HTML with syntax highlighting applied */
-  highlightedHtml?: string;
-  /** Base64-encoded content for binary/image files */
-  base64Content?: string;
-  /** Additional metadata from processing (line count, etc.) */
-  metadata?: Record<string, any>;
 }
 
 /**

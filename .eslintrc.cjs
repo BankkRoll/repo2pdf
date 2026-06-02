@@ -13,10 +13,7 @@ module.exports = {
     project: "./tsconfig.json",
   },
   plugins: ["@typescript-eslint"],
-  extends: [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-  ],
+  extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   env: {
     node: true,
     es2022: true,

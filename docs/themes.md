@@ -1,28 +1,30 @@
 # Themes
 
-repo2pdf includes a comprehensive theme system with 10+ built-in themes. Each theme provides complete color customization for the generated PDF.
+repo2pdf includes a comprehensive theme system with 10 built-in themes. Each theme provides a complete color palette for the generated PDF.
+
+The default theme is **`github-light`**.
 
 ## Built-in Themes
 
-### Dark Themes
-
-| Theme            | Description                   |
-| ---------------- | ----------------------------- |
-| `github-dark`    | GitHub's dark theme (default) |
-| `dracula`        | Popular Dracula color scheme  |
-| `nord`           | Arctic, bluish color palette  |
-| `monokai`        | Classic Monokai colors        |
-| `one-dark-pro`   | Atom's One Dark theme         |
-| `tokyo-night`    | Tokyo Night color scheme      |
-| `solarized-dark` | Solarized dark variant        |
-| `vitesse-dark`   | Vitesse minimal dark theme    |
-
 ### Light Themes
 
-| Theme             | Description             |
-| ----------------- | ----------------------- |
-| `github-light`    | GitHub's light theme    |
-| `solarized-light` | Solarized light variant |
+| Theme             | Description                    |
+| ----------------- | ------------------------------ |
+| `github-light`    | GitHub's light theme (default) |
+| `solarized-light` | Solarized light variant        |
+
+### Dark Themes
+
+| Theme            | Description                  |
+| ---------------- | ---------------------------- |
+| `github-dark`    | GitHub's dark theme          |
+| `dracula`        | Popular Dracula color scheme |
+| `nord`           | Arctic, bluish color palette |
+| `monokai`        | Classic Monokai colors       |
+| `one-dark-pro`   | Atom's One Dark theme        |
+| `tokyo-night`    | Tokyo Night color scheme     |
+| `solarized-dark` | Solarized dark variant       |
+| `vitesse-dark`   | Vitesse minimal dark theme   |
 
 ### Theme Aliases
 
@@ -81,6 +83,62 @@ module.exports = {
 };
 ```
 
+## Highlighting and Fonts
+
+A theme controls the document's color palette. Two related `style` options
+control how code is colored and which fonts are used.
+
+### Highlight Mode
+
+`config.style.highlight` selects how syntax highlighting is resolved:
+
+| Mode    | Behavior                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------ |
+| `auto`  | Default. Uses [Shiki](https://shiki.style/) when it can load (Node), otherwise plain text. |
+| `shiki` | Forces Shiki. Fails if Shiki is unavailable.                                               |
+| `none`  | Never highlights. Universal and dependency-free — safe for edge and browser runtimes.      |
+
+Shiki is an **optional** dependency and is never required to produce a PDF. When
+it cannot load (for example on edge or in the browser), code is rendered as
+readable plain text using the theme colors.
+
+```typescript
+await convertRepository({
+  // ...
+  style: {
+    theme: "tokyo-night",
+    highlight: "auto", // "auto" | "shiki" | "none"
+  },
+});
+```
+
+### Custom Fonts
+
+The renderer ships with bundled, OFL-licensed fonts — **Inter** for UI text and
+**JetBrains Mono** for code. You can override any role via `config.style.fonts`.
+Each role takes raw font bytes (`.ttf`/`.otf` as a `Uint8Array`); any role left
+undefined uses the bundled default. Passing bytes is also how you supply fonts on
+runtimes without `fs` (edge, browser).
+
+```typescript
+import { readFile } from "node:fs/promises";
+
+await convertRepository({
+  // ...
+  style: {
+    theme: "github-light",
+    fonts: {
+      sans: await readFile("./fonts/MySans-Regular.ttf"),
+      sansSemibold: await readFile("./fonts/MySans-SemiBold.ttf"),
+      sansBold: await readFile("./fonts/MySans-Bold.ttf"),
+      mono: await readFile("./fonts/MyMono-Regular.ttf"),
+      monoBold: await readFile("./fonts/MyMono-Bold.ttf"),
+      monoItalic: await readFile("./fonts/MyMono-Italic.ttf"),
+    },
+  },
+});
+```
+
 ## Theme Structure
 
 Each theme defines colors for every element in the generated PDF:
@@ -89,7 +147,7 @@ Each theme defines colors for every element in the generated PDF:
 interface Theme {
   name: string; // Display name
   type: "dark" | "light"; // Theme type
-  shikiTheme: string; // Base Shiki theme for syntax highlighting
+  shikiTheme: string; // Base Shiki theme used when highlighting is active
 
   colors: {
     // Backgrounds
@@ -169,63 +227,14 @@ const myTheme: Theme = {
 };
 ```
 
-### Using Custom CSS
-
-For simpler customizations, use the `customCSS` option:
-
-```typescript
-await convertRepository({
-  // ...
-  style: {
-    theme: "github-dark",
-    customCSS: `
-      /* Make code blocks have rounded corners */
-      .file-container {
-        border-radius: 12px;
-        overflow: hidden;
-      }
-
-      /* Custom header styling */
-      .file-header {
-        font-weight: bold;
-        letter-spacing: 0.5px;
-      }
-
-      /* Larger font for code */
-      .code-content {
-        font-size: 14px;
-      }
-    `,
-  },
-});
-```
-
-### Configuration File with Custom CSS
-
-```javascript
-// repo2pdf.config.js
-module.exports = {
-  style: {
-    theme: "dracula",
-    lineNumbers: true,
-    customCSS: `
-      /* Add a subtle gradient to the background */
-      body {
-        background: linear-gradient(135deg, #282a36 0%, #1e1f29 100%);
-      }
-
-      /* Softer shadows on file containers */
-      .file-container {
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      }
-    `,
-  },
-};
-```
+> repo2pdf renders the PDF directly with pdf-lib — there is no HTML or CSS in the
+> output. Visual customization is done through the theme's `colors` palette and
+> the `config.style` options (theme, highlight mode, fonts, line/page numbers),
+> not via CSS.
 
 ## Theme Colors Reference
 
-### GitHub Dark (Default)
+### GitHub Dark
 
 ```
 Background:     #0d1117
@@ -281,7 +290,9 @@ Accent:         #bb9af7
 
 ## Syntax Highlighting
 
-repo2pdf uses [Shiki](https://shiki.matsu.io/) (the same engine as VS Code) for syntax highlighting. Each theme maps to a Shiki theme for code coloring:
+When highlighting is active, repo2pdf uses [Shiki](https://shiki.style/) (the same engine as VS Code). Shiki is **optional** — it is used automatically in Node when `style.highlight` is `auto` (the default) or `shiki`, and code falls back to plain text where Shiki cannot load (for example on edge or in the browser) or when `highlight` is `none`. See [Highlight Mode](#highlight-mode) above.
+
+Each theme maps to a Shiki theme for code coloring:
 
 | repo2pdf Theme    | Shiki Theme       |
 | ----------------- | ----------------- |
@@ -318,10 +329,6 @@ Shiki supports 300+ languages including:
 - **For printing**: Use `github-light` or `solarized-light` to save ink
 - **For long documents**: Use `nord` for reduced eye strain
 
-### Performance
-
-Dark themes generally render faster because they have fewer bright colors to composite in the PDF.
-
 ### Accessibility
 
 When choosing themes, consider:
@@ -334,4 +341,4 @@ When choosing themes, consider:
 
 - [CLI Reference](./cli.md) - Using themes from command line
 - [Configuration](./configuration.md) - Configuration file options
-- [Plugins](./plugins.md) - Creating theme plugins
+- [Plugins](./plugins.md) - Customizing `config.style` from a plugin (see the theme-customizer example)

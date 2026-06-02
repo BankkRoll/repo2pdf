@@ -1,9 +1,17 @@
 /**
- * Multi-language syntax highlighting tests.
+ * Multi-language coverage tests.
  *
- * Proves that Shiki-based highlighting works across the ~25 sample languages in
- * the multi-language fixtures, that the highlighter is a shared singleton, and
+ * Proves that the ~25 sample languages in the multi-language fixtures all
+ * process to non-empty content and render to a valid PDF, that the Shiki
+ * tokenizer (which now lives in the renderer, not the CodeProcessor) is a shared
+ * singleton, that representative languages tokenize to real colored runs, and
  * that unknown languages fall back gracefully without throwing.
+ *
+ * Architecture note: syntax highlighting moved out of CodeProcessor into the
+ * renderer's Tokenizer. CodeProcessor.process() now only returns
+ * { ...file, processedContent } — no highlightedHtml. Color assertions therefore
+ * target the ShikiTokenizer directly, and "it renders" is proven by generating a
+ * real PDF (%PDF- header) rather than by inspecting HTML.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,18 +19,24 @@ import fs from "fs";
 import path from "path";
 
 import { CodeProcessor } from "../src/processors/code-processor";
+import { PDFGenerator } from "../src/generators/pdf-generator";
+import { ShikiTokenizer } from "../src/renderers/tokenizers";
 import {
   determineFileType,
   determineLanguage,
   extractExtension,
 } from "../src/utils/file-utils";
-import { getHighlighter, disposeHighlighters } from "../src/utils/shiki-manager";
+import {
+  getHighlighter,
+  disposeHighlighters,
+} from "../src/utils/shiki-manager";
 import {
   generateAllFixtures,
   MULTI_LANGUAGE_DIR,
 } from "./fixtures/generate-fixtures";
 import { createTestConfig } from "./helpers/test-utils";
-import type { RepoFile } from "../src/types/file.types";
+import type { RepoFile, ProcessedFile } from "../src/types/file.types";
+import type { TokenizedLine } from "../src/renderers/tokenizer.interface";
 
 const TEST_TIMEOUT = 60000;
 
@@ -43,15 +57,17 @@ function buildRepoFile(fileName: string): RepoFile {
   };
 }
 
-/** True when the HTML looks like real Shiki output or an acceptable fallback. */
-function looksHighlighted(html: string | undefined): boolean {
-  if (!html || html.length === 0) return false;
-  return (
-    html.includes("<span") || html.includes("shiki") || html.includes("<pre")
-  );
+/** Flatten tokenized lines into the concatenated text they represent. */
+function tokensToText(lines: TokenizedLine[]): string {
+  return lines.map((line) => line.map((t) => t.text).join("")).join("\n");
 }
 
-describe("multi-language syntax highlighting", () => {
+/** True when at least one token carries a (non-default) syntax color. */
+function hasColoredTokens(lines: TokenizedLine[]): boolean {
+  return lines.some((line) => line.some((t) => typeof t.color === "string"));
+}
+
+describe("multi-language coverage", () => {
   beforeAll(() => {
     generateAllFixtures();
   });
@@ -72,10 +88,11 @@ describe("multi-language syntax highlighting", () => {
     TEST_TIMEOUT,
   );
 
-  // 1. Every sample.<ext> highlights to non-empty Shiki/fallback HTML.
-  describe("per-language fixture highlighting", () => {
+  // 1. Every sample.<ext> processes to non-empty processedContent (no
+  //    highlighting happens here anymore — that moved to the renderer).
+  describe("per-language fixture processing", () => {
     it.each(sampleFiles)(
-      "highlights %s",
+      "processes %s to non-empty processedContent",
       async (fileName) => {
         const file = buildRepoFile(fileName);
         const processor = new CodeProcessor(createTestConfig());
@@ -85,15 +102,40 @@ describe("multi-language syntax highlighting", () => {
         expect(result).toBeDefined();
         expect(typeof result.processedContent).toBe("string");
         expect(result.processedContent.length).toBeGreaterThan(0);
-        expect(typeof result.highlightedHtml).toBe("string");
-        expect(result.highlightedHtml!.length).toBeGreaterThan(0);
-        expect(looksHighlighted(result.highlightedHtml)).toBe(true);
+        // The original source survives processing verbatim.
+        expect(result.processedContent).toBe(file.content);
       },
       TEST_TIMEOUT,
     );
   });
 
-  // 2. Singleton proof: same theme returns the SAME highlighter instance.
+  // 2. The whole multi-language set renders to a single valid PDF.
+  it(
+    "renders the whole multi-language set to a valid PDF",
+    async () => {
+      const config = createTestConfig();
+      const processor = new CodeProcessor(config);
+
+      const processed: ProcessedFile[] = [];
+      for (const fileName of sampleFiles) {
+        processed.push(await processor.process(buildRepoFile(fileName)));
+      }
+
+      const generator = new PDFGenerator(config);
+      const bytes = await generator.generateToBytes(processed, {
+        name: "multi-language",
+        description: "Multi-language fixtures",
+        url: "",
+      });
+
+      expect(bytes.length).toBeGreaterThan(0);
+      const header = Buffer.from(bytes.slice(0, 5)).toString("latin1");
+      expect(header).toBe("%PDF-");
+    },
+    TEST_TIMEOUT,
+  );
+
+  // 3. Singleton proof: same theme returns the SAME highlighter instance.
   it(
     "returns the same highlighter instance for a given theme (singleton)",
     async () => {
@@ -104,40 +146,47 @@ describe("multi-language syntax highlighting", () => {
     TEST_TIMEOUT,
   );
 
-  // 3. mapLanguage outputs are loadable: representative langs produce real
-  //    highlighted output (Shiki <span>/shiki), not the raw escaped fallback.
-  describe("representative languages produce real highlighting", () => {
-    const REPRESENTATIVE: Array<{ ext: string; firstLine: string }> = [
-      { ext: "ts", firstLine: "export const greet" },
-      { ext: "py", firstLine: "def fib" },
-      { ext: "go", firstLine: "package main" },
-      { ext: "rs", firstLine: "fn main" },
-      { ext: "cpp", firstLine: "#include <iostream>" },
-      { ext: "rb", firstLine: "def greet" },
+  // 4. Representative languages tokenize to real colored runs via the Shiki
+  //    tokenizer (the renderer's highlighter), not a plain-text fallback.
+  describe("representative languages produce real colored tokens", () => {
+    const REPRESENTATIVE: Array<{ ext: string; firstWord: string }> = [
+      { ext: "ts", firstWord: "export" },
+      { ext: "py", firstWord: "def" },
+      { ext: "go", firstWord: "package" },
+      { ext: "rs", firstWord: "fn" },
+      { ext: "cpp", firstWord: "#include" },
+      { ext: "rb", firstWord: "def" },
     ];
 
     it.each(REPRESENTATIVE)(
-      "highlights .$ext with Shiki (not raw fallback)",
-      async ({ ext, firstLine }) => {
+      "tokenizes .$ext with Shiki colors",
+      async ({ ext, firstWord }) => {
         const file = buildRepoFile(`sample.${ext}`);
         const processor = new CodeProcessor(createTestConfig());
-
         const result = await processor.process(file);
 
-        // Original content is preserved.
-        expect(result.processedContent).toContain(firstLine.split(" ")[0]);
-        // Real Shiki output (the escaped-only fallback has no class="shiki"
-        // wrapper and no token <span> elements).
-        const html = result.highlightedHtml || "";
-        expect(
-          html.includes("shiki") || html.includes("<span"),
-        ).toBe(true);
+        // Original content is preserved by processing.
+        expect(result.processedContent).toContain(firstWord);
+
+        const tokenizer = new ShikiTokenizer();
+        const lines = await tokenizer.tokenize(
+          result.processedContent,
+          file.language ?? "text",
+          "github-dark",
+        );
+
+        // The tokenized text round-trips back to the source content.
+        expect(tokensToText(lines)).toBe(result.processedContent);
+        // Real Shiki output carries per-token colors (the plain fallback does
+        // not).
+        expect(hasColoredTokens(lines)).toBe(true);
       },
       TEST_TIMEOUT,
     );
   });
 
-  // 4. Unknown language falls back gracefully without throwing.
+  // 5. Unknown language falls back gracefully without throwing: content is
+  //    preserved and it still tokenizes (to a single plain run) and renders.
   it(
     "falls back gracefully for an unknown language",
     async () => {
@@ -156,14 +205,27 @@ describe("multi-language syntax highlighting", () => {
 
       const result = await processor.process(file);
 
+      // Content is preserved verbatim — no highlighting mangles it.
       expect(result.processedContent).toBe(content);
-      expect(typeof result.highlightedHtml).toBe("string");
-      expect(result.highlightedHtml!.length).toBeGreaterThan(0);
-      // Either a <pre> fallback or a plain-text Shiki highlight.
-      expect(
-        result.highlightedHtml!.includes("<pre") ||
-          result.highlightedHtml!.includes("shiki"),
-      ).toBe(true);
+
+      // Tokenizing an unknown language must not throw; it round-trips the text.
+      const tokenizer = new ShikiTokenizer();
+      const lines = await tokenizer.tokenize(
+        result.processedContent,
+        file.language ?? "text",
+        "github-dark",
+      );
+      expect(tokensToText(lines)).toBe(result.processedContent);
+
+      // It also renders to a valid PDF end-to-end.
+      const generator = new PDFGenerator(createTestConfig());
+      const bytes = await generator.generateToBytes([result], {
+        name: "weird",
+        description: "Unknown language",
+        url: "",
+      });
+      const header = Buffer.from(bytes.slice(0, 5)).toString("latin1");
+      expect(header).toBe("%PDF-");
     },
     TEST_TIMEOUT,
   );

@@ -130,10 +130,11 @@ describe("FileProcessor binary/hidden filtering", () => {
     const bin = result.find((f) => f.path === "assets/blob.bin");
     expect(bin?.processedContent).toContain("Binary file");
 
-    // Image produced base64 content (we gave it a real Buffer).
+    // Image is rendered as a placeholder (no base64 embedding): its
+    // processedContent is the empty string and there is no base64Content field.
     const img = result.find((f) => f.path === "assets/logo.png");
-    expect(img?.base64Content).toBeDefined();
-    expect(img?.base64Content).toContain("data:image/png;base64,");
+    expect(img).toBeDefined();
+    expect(img!.processedContent).toBe("");
   });
 
   it("includeHiddenFiles:true includes the hidden code file but binary stays excluded", async () => {

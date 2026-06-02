@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CodeProcessor } from "../src/processors/code-processor";
+import { HookPoint } from "../src/plugins/plugin-manager";
+import type { PluginRunner } from "../src/plugins/plugin-runner";
 import type { Config } from "../src/types/config.types";
 import type { RepoFile } from "../src/types/file.types";
 
@@ -22,7 +24,7 @@ const createConfig = (overrides: Partial<Config> = {}): Config => ({
     ...overrides.output,
   },
   style: {
-    theme: "github-dark",
+    theme: "github-light",
     fontSize: "14px",
     fontFamily: "monospace",
     lineNumbers: true,
@@ -64,6 +66,12 @@ const createFile = (overrides: Partial<RepoFile> = {}): RepoFile => ({
   ...overrides,
 });
 
+/**
+ * A representative spread of languages. Highlighting now happens in the
+ * renderer's tokenizer (covered by the tokenizer tests), so here we only assert
+ * that `process()` preserves the raw content across languages when no
+ * transforms are enabled.
+ */
 const LANGUAGES = [
   // Web
   {
@@ -104,28 +112,10 @@ const LANGUAGES = [
     code: "$color: #333; body { color: $color; }",
   },
   {
-    name: "Less",
-    file: "styles.less",
-    lang: "less",
-    code: "@color: #333; body { color: @color; }",
-  },
-  {
     name: "Vue",
     file: "App.vue",
     lang: "vue",
     code: "<template><div>{{ msg }}</div></template>",
-  },
-  {
-    name: "Svelte",
-    file: "App.svelte",
-    lang: "svelte",
-    code: "<script>let count = 0;</script>",
-  },
-  {
-    name: "CoffeeScript",
-    file: "app.coffee",
-    lang: "coffeescript",
-    code: "square = (x) -> x * x",
   },
 
   // Systems
@@ -153,22 +143,8 @@ const LANGUAGES = [
     lang: "go",
     code: "package main\nfunc main() {}",
   },
-  {
-    name: "Zig",
-    file: "main.zig",
-    lang: "zig",
-    code: 'const std = @import("std");',
-  },
-  {
-    name: "D",
-    file: "main.d",
-    lang: "d",
-    code: "import std.stdio; void main() {}",
-  },
-  { name: "Nim", file: "main.nim", lang: "nim", code: 'echo "Hello"' },
-  { name: "Crystal", file: "main.cr", lang: "crystal", code: 'puts "Hello"' },
 
-  // JVM
+  // JVM / .NET
   {
     name: "Java",
     file: "Main.java",
@@ -182,37 +158,10 @@ const LANGUAGES = [
     code: 'fun main() { println("Hello") }',
   },
   {
-    name: "Scala",
-    file: "Main.scala",
-    lang: "scala",
-    code: 'object Main extends App { println("Hello") }',
-  },
-  {
-    name: "Groovy",
-    file: "Main.groovy",
-    lang: "groovy",
-    code: 'println "Hello"',
-  },
-  {
-    name: "Clojure",
-    file: "main.clj",
-    lang: "clojure",
-    code: '(ns hello) (defn -main [] (println "Hi"))',
-  },
-
-  // .NET
-  {
     name: "C#",
     file: "Program.cs",
     lang: "csharp",
     code: "using System; class Program { static void Main() {} }",
-  },
-  { name: "F#", file: "Program.fs", lang: "fsharp", code: 'printfn "Hello"' },
-  {
-    name: "VB",
-    file: "Main.vb",
-    lang: "vb",
-    code: "Module Main\nSub Main()\nEnd Sub\nEnd Module",
   },
 
   // Scripting
@@ -234,84 +183,8 @@ const LANGUAGES = [
     lang: "php",
     code: "<?php echo 'Hello'; ?>",
   },
-  { name: "Perl", file: "main.pl", lang: "perl", code: 'print "Hello\\n";' },
-  { name: "Lua", file: "main.lua", lang: "lua", code: 'print("Hello")' },
-  { name: "R", file: "main.r", lang: "r", code: 'print("Hello")' },
-  { name: "Julia", file: "main.jl", lang: "julia", code: 'println("Hello")' },
-  {
-    name: "AWK",
-    file: "script.awk",
-    lang: "awk",
-    code: 'BEGIN { print "Hello" }',
-  },
 
-  // Functional
-  {
-    name: "Haskell",
-    file: "Main.hs",
-    lang: "haskell",
-    code: 'main = putStrLn "Hello"',
-  },
-  {
-    name: "Elixir",
-    file: "main.ex",
-    lang: "elixir",
-    code: 'defmodule Hello do def world, do: IO.puts "Hi" end',
-  },
-  {
-    name: "Erlang",
-    file: "main.erl",
-    lang: "erlang",
-    code: "-module(hello). -export([main/0]).",
-  },
-  {
-    name: "OCaml",
-    file: "main.ml",
-    lang: "ocaml",
-    code: 'let () = print_endline "Hello"',
-  },
-  {
-    name: "Scheme",
-    file: "main.scm",
-    lang: "scheme",
-    code: '(display "Hello")',
-  },
-  {
-    name: "Racket",
-    file: "main.rkt",
-    lang: "racket",
-    code: '#lang racket (displayln "Hello")',
-  },
-  { name: "Lisp", file: "main.lisp", lang: "lisp", code: '(format t "Hello")' },
-  {
-    name: "Elm",
-    file: "Main.elm",
-    lang: "elm",
-    code: "module Main exposing (main)",
-  },
-  {
-    name: "PureScript",
-    file: "Main.purs",
-    lang: "purescript",
-    code: "module Main where",
-  },
-
-  // Mobile
-  { name: "Swift", file: "main.swift", lang: "swift", code: 'print("Hello")' },
-  {
-    name: "Objective-C",
-    file: "main.m",
-    lang: "objective-c",
-    code: "#import <Foundation/Foundation.h>",
-  },
-  {
-    name: "Dart",
-    file: "main.dart",
-    lang: "dart",
-    code: 'void main() { print("Hello"); }',
-  },
-
-  // Shell/DevOps
+  // Shell / DevOps
   {
     name: "Bash",
     file: "script.sh",
@@ -319,31 +192,13 @@ const LANGUAGES = [
     code: '#!/bin/bash\necho "Hello"',
   },
   {
-    name: "PowerShell",
-    file: "script.ps1",
-    lang: "powershell",
-    code: 'Write-Host "Hello"',
-  },
-  {
     name: "Dockerfile",
     file: "Dockerfile",
     lang: "dockerfile",
     code: "FROM node:18\nRUN npm install",
   },
-  {
-    name: "Makefile",
-    file: "Makefile",
-    lang: "makefile",
-    code: "all: build\nbuild:\n\tgcc main.c",
-  },
-  {
-    name: "Nginx",
-    file: "nginx.conf",
-    lang: "nginx",
-    code: "server { listen 80; }",
-  },
 
-  // Data
+  // Data / Docs
   { name: "JSON", file: "data.json", lang: "json", code: '{ "name": "test" }' },
   {
     name: "YAML",
@@ -352,168 +207,39 @@ const LANGUAGES = [
     code: "name: test\nversion: 1.0",
   },
   {
-    name: "TOML",
-    file: "config.toml",
-    lang: "toml",
-    code: '[package]\nname = "test"',
-  },
-  {
-    name: "XML",
-    file: "data.xml",
-    lang: "xml",
-    code: '<?xml version="1.0"?><root/>',
-  },
-  {
-    name: "INI",
-    file: "config.ini",
-    lang: "ini",
-    code: "[section]\nkey = value",
-  },
-
-  // Docs
-  {
     name: "Markdown",
     file: "README.md",
     lang: "markdown",
     code: "# Title\n\nText here.",
   },
-  {
-    name: "LaTeX",
-    file: "doc.tex",
-    lang: "latex",
-    code: "\\documentclass{article}",
-  },
 
   // Database
   { name: "SQL", file: "query.sql", lang: "sql", code: "SELECT * FROM users;" },
-  {
-    name: "GraphQL",
-    file: "schema.graphql",
-    lang: "graphql",
-    code: "type Query { user: User }",
-  },
-  {
-    name: "Prisma",
-    file: "schema.prisma",
-    lang: "prisma",
-    code: "model User { id Int @id }",
-  },
-
-  // Legacy
-  {
-    name: "COBOL",
-    file: "main.cob",
-    lang: "cobol",
-    code: "IDENTIFICATION DIVISION.",
-  },
-  {
-    name: "Fortran",
-    file: "main.f90",
-    lang: "fortran",
-    code: "program hello\nend program",
-  },
-  {
-    name: "Pascal",
-    file: "main.pas",
-    lang: "pascal",
-    code: "program Hello; begin end.",
-  },
-  { name: "Ada", file: "main.adb", lang: "ada", code: "with Ada.Text_IO;" },
-
-  // Hardware
-  {
-    name: "Verilog",
-    file: "main.v",
-    lang: "verilog",
-    code: "module hello; endmodule",
-  },
-  { name: "VHDL", file: "main.vhd", lang: "vhdl", code: "library IEEE;" },
-  {
-    name: "Assembly",
-    file: "main.asm",
-    lang: "asm",
-    code: "section .text\nglobal _start",
-  },
-
-  // Other
-  {
-    name: "Solidity",
-    file: "Contract.sol",
-    lang: "solidity",
-    code: "pragma solidity ^0.8.0;",
-  },
-  {
-    name: "Prolog",
-    file: "main.pro",
-    lang: "prolog",
-    code: "hello :- write('Hello').",
-  },
-  { name: "MATLAB", file: "main.m", lang: "matlab", code: "disp('Hello')" },
-  {
-    name: "CMake",
-    file: "CMakeLists.txt",
-    lang: "cmake",
-    code: "cmake_minimum_required(VERSION 3.10)",
-  },
-  {
-    name: "HCL",
-    file: "main.tf",
-    lang: "hcl",
-    code: 'resource "aws_instance" "example" {}',
-  },
-  {
-    name: "Nix",
-    file: "default.nix",
-    lang: "nix",
-    code: "{ pkgs ? import <nixpkgs> {} }: pkgs.hello",
-  },
-  {
-    name: "Fish",
-    file: "script.fish",
-    lang: "fish",
-    code: "function greet; echo Hello; end",
-  },
-  { name: "Tcl", file: "main.tcl", lang: "tcl", code: 'puts "Hello"' },
-  {
-    name: "Handlebars",
-    file: "template.hbs",
-    lang: "handlebars",
-    code: "<h1>{{title}}</h1>",
-  },
-  {
-    name: "Jinja",
-    file: "template.j2",
-    lang: "jinja",
-    code: "<h1>{{ title }}</h1>",
-  },
-  {
-    name: "Twig",
-    file: "template.twig",
-    lang: "twig",
-    code: "{% block content %}{% endblock %}",
-  },
-  {
-    name: "Apex",
-    file: "Main.cls",
-    lang: "apex",
-    code: "public class Main { }",
-  },
-];
-
-const THEMES = [
-  "github-dark",
-  "github-light",
-  "monokai",
-  "dracula",
-  "nord",
-  "one-dark-pro",
-  "solarized-light",
-  "solarized-dark",
 ];
 
 describe("CodeProcessor", () => {
   describe("language support", () => {
-    it("highlights all 84 supported languages", async () => {
+    it.each(LANGUAGES)(
+      "preserves $name content through process()",
+      async ({ file, lang, code }) => {
+        const processor = new CodeProcessor(createConfig());
+        const result = await processor.process(
+          createFile({
+            name: file,
+            path: `src/${file}`,
+            content: code,
+            size: code.length,
+            language: lang,
+            extension: file.split(".").pop() || "",
+          }),
+        );
+
+        // No transforms enabled, so content is preserved verbatim.
+        expect(result.processedContent).toBe(code);
+      },
+    );
+
+    it("preserves content for every sampled language", async () => {
       const processor = new CodeProcessor(createConfig());
       const failed: string[] = [];
 
@@ -530,11 +256,8 @@ describe("CodeProcessor", () => {
             }),
           );
 
-          if (!result.processedContent.includes(code.split("\n")[0])) {
+          if (result.processedContent !== code) {
             failed.push(`${name}: content mismatch`);
-          }
-          if (!result.highlightedHtml?.includes("shiki")) {
-            failed.push(`${name}: missing shiki`);
           }
         } catch (e) {
           failed.push(`${name}: ${(e as Error).message}`);
@@ -550,6 +273,13 @@ describe("CodeProcessor", () => {
       const processor = new CodeProcessor(createConfig());
       await expect(
         processor.process(createFile({ content: "", size: 0 })),
+      ).rejects.toThrow("Failed to process code file");
+    });
+
+    it("wraps the empty-content cause in the processor error", async () => {
+      const processor = new CodeProcessor(createConfig());
+      await expect(
+        processor.process(createFile({ content: "", size: 0 })),
       ).rejects.toThrow("File content is empty");
     });
 
@@ -557,7 +287,7 @@ describe("CodeProcessor", () => {
       const processor = new CodeProcessor(createConfig());
       await expect(
         processor.process(createFile({ content: null as any })),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Failed to process code file");
     });
 
     it("handles unknown language", async () => {
@@ -572,7 +302,6 @@ describe("CodeProcessor", () => {
       );
 
       expect(result.processedContent).toBe("some text");
-      expect(result.highlightedHtml).toBeDefined();
     });
 
     it("handles long content", async () => {
@@ -606,21 +335,31 @@ describe("CodeProcessor", () => {
     });
   });
 
+  describe("content preservation", () => {
+    it("returns the file shape with processedContent and no highlightedHtml", async () => {
+      const processor = new CodeProcessor(createConfig());
+      const file = createFile({ content: "const x = 1;" });
+      const result = await processor.process(file);
+
+      expect(result.processedContent).toBe("const x = 1;");
+      expect(result.path).toBe(file.path);
+      expect(result.language).toBe(file.language);
+      // Highlighting moved to the renderer; the processor must not emit HTML.
+      expect("highlightedHtml" in result).toBe(false);
+    });
+
+    it("preserves content verbatim when no transforms are enabled", async () => {
+      const processor = new CodeProcessor(createConfig());
+      const content = "const x = 1; // comment\n\nconst y = 2;";
+      const result = await processor.process(createFile({ content }));
+
+      expect(result.processedContent).toBe(content);
+    });
+  });
+
   describe("comment removal", () => {
     const configWithCommentRemoval = () =>
-      createConfig({
-        processing: {
-          ignorePatterns: [],
-          maxConcurrency: 5,
-          removeComments: true,
-          removeEmptyLines: false,
-          includeBinaryFiles: true,
-          includeHiddenFiles: false,
-          timeout: 300000,
-          useIncrementalProcessing: true,
-          incrementalChunkSize: 100,
-        },
-      });
+      createConfig({ processing: { removeComments: true } as any });
 
     it("removes single-line comments", async () => {
       const processor = new CodeProcessor(configWithCommentRemoval());
@@ -642,6 +381,15 @@ describe("CodeProcessor", () => {
       expect(result.processedContent).toContain("const x = 1");
     });
 
+    it("does not strip comment markers inside string literals", async () => {
+      const processor = new CodeProcessor(configWithCommentRemoval());
+      const result = await processor.process(
+        createFile({ content: 'const url = "https://example.com";' }),
+      );
+
+      expect(result.processedContent).toContain("https://example.com");
+    });
+
     it("removes Python comments", async () => {
       const processor = new CodeProcessor(configWithCommentRemoval());
       const result = await processor.process(
@@ -654,6 +402,7 @@ describe("CodeProcessor", () => {
       );
 
       expect(result.processedContent).not.toContain("# comment");
+      expect(result.processedContent).toContain("x = 1");
     });
 
     it("removes HTML comments", async () => {
@@ -668,6 +417,7 @@ describe("CodeProcessor", () => {
       );
 
       expect(result.processedContent).not.toContain("comment");
+      expect(result.processedContent).toContain("<div>");
     });
 
     it("preserves comments when disabled", async () => {
@@ -682,19 +432,7 @@ describe("CodeProcessor", () => {
 
   describe("empty line removal", () => {
     const configWithEmptyLineRemoval = () =>
-      createConfig({
-        processing: {
-          ignorePatterns: [],
-          maxConcurrency: 5,
-          removeComments: false,
-          removeEmptyLines: true,
-          includeBinaryFiles: true,
-          includeHiddenFiles: false,
-          timeout: 300000,
-          useIncrementalProcessing: true,
-          incrementalChunkSize: 100,
-        },
-      });
+      createConfig({ processing: { removeEmptyLines: true } as any });
 
     it("removes empty lines", async () => {
       const processor = new CodeProcessor(configWithEmptyLineRemoval());
@@ -702,10 +440,18 @@ describe("CodeProcessor", () => {
         createFile({ content: "const x = 1;\n\nconst y = 2;\n\nconst z = 3;" }),
       );
 
-      const lines = result.processedContent
-        .split("\n")
-        .filter((l: string) => l.trim());
-      expect(lines.length).toBe(3);
+      const lines = result.processedContent.split("\n");
+      expect(lines).toEqual(["const x = 1;", "const y = 2;", "const z = 3;"]);
+    });
+
+    it("collapses whitespace-only lines", async () => {
+      const processor = new CodeProcessor(configWithEmptyLineRemoval());
+      const result = await processor.process(
+        createFile({ content: "a\n   \n\t\nb" }),
+      );
+
+      // All blank/whitespace-only lines are dropped.
+      expect(result.processedContent).toBe("a\nb");
     });
 
     it("preserves empty lines when disabled", async () => {
@@ -718,25 +464,62 @@ describe("CodeProcessor", () => {
     });
   });
 
-  describe("themes", () => {
-    it.each(THEMES)("%s", async (theme) => {
-      const processor = new CodeProcessor(
-        createConfig({
-          style: {
-            theme,
-            fontSize: "14px",
-            fontFamily: "monospace",
-            lineNumbers: true,
-            pageNumbers: true,
-            includeTableOfContents: true,
-            customCSS: "",
-          },
-        }),
+  describe("plugin hooks", () => {
+    it("applies the TRANSFORM_CONTENT plugin hook to processed content", async () => {
+      const pluginRunner: PluginRunner = {
+        hasHookHandlers: (hook) => hook === HookPoint.TRANSFORM_CONTENT,
+        executeHook: async (hook, ...args) => {
+          if (hook === HookPoint.TRANSFORM_CONTENT) {
+            return `${args[0] as string}\n// added by plugin`;
+          }
+          return args[0];
+        },
+      };
+
+      const processor = new CodeProcessor(createConfig(), pluginRunner);
+      const result = await processor.process(
+        createFile({ content: "const x = 1;" }),
       );
 
-      const result = await processor.process(createFile());
+      expect(result.processedContent).toBe("const x = 1;\n// added by plugin");
+    });
 
-      expect(result.highlightedHtml).toContain("shiki");
+    it("ignores a non-string TRANSFORM_CONTENT result", async () => {
+      const pluginRunner: PluginRunner = {
+        hasHookHandlers: (hook) => hook === HookPoint.TRANSFORM_CONTENT,
+        executeHook: async () => 42 as unknown,
+      };
+
+      const processor = new CodeProcessor(createConfig(), pluginRunner);
+      const result = await processor.process(
+        createFile({ content: "const x = 1;" }),
+      );
+
+      expect(result.processedContent).toBe("const x = 1;");
+    });
+
+    it("runs the TRANSFORM_CONTENT hook after content transforms", async () => {
+      const seen: string[] = [];
+      const pluginRunner: PluginRunner = {
+        hasHookHandlers: (hook) => hook === HookPoint.TRANSFORM_CONTENT,
+        executeHook: async (_hook, ...args) => {
+          const content = args[0] as string;
+          seen.push(content);
+          return content;
+        },
+      };
+
+      const processor = new CodeProcessor(
+        createConfig({ processing: { removeComments: true } as any }),
+        pluginRunner,
+      );
+      await processor.process(
+        createFile({ content: "const x = 1; // strip me" }),
+      );
+
+      // The hook should receive the comment-stripped content.
+      expect(seen).toHaveLength(1);
+      expect(seen[0]).not.toContain("// strip me");
     });
   });
 });

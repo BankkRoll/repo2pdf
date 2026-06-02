@@ -58,68 +58,18 @@ export class Repo2PDF {
   }
 
   /**
-   * Convert the configured repository to the output format.
+   * Convert the configured repository to a PDF file on disk.
+   *
+   * @returns The generation result (output path, size, timing).
    */
-  public async convert(options: ConvertOptions = {}): Promise<GenerationResult> {
-    const onPhase = options.onPhase ?? (() => {});
+  public async convert(
+    options: ConvertOptions = {},
+  ): Promise<GenerationResult> {
     try {
-      // Initialize the plugin system (no-op runner if disabled).
-      this.plugins = await this.initializePlugins();
-
-      // PRE_FETCH: plugins may modify config before anything happens.
-      this.config =
-        ((await this.plugins.executeHook(
-          HookPoint.PRE_FETCH,
-          this.config,
-        )) as Config) ?? this.config;
-
-      // ---- Fetch ----
-      onPhase("fetch", "Fetching repository...");
-      let files = await this.fetchFiles();
-
-      // POST_FETCH: plugins may add/remove/modify fetched files.
-      files =
-        ((await this.plugins.executeHook(
-          HookPoint.POST_FETCH,
-          files,
-          this.config,
-        )) as RepoFile[]) ?? files;
-
-      const repoInfo = await this.getRepositoryInfo();
-
-      // PRE_PROCESS: last chance to modify the file list before processing.
-      files =
-        ((await this.plugins.executeHook(
-          HookPoint.PRE_PROCESS,
-          files,
-          this.config,
-        )) as RepoFile[]) ?? files;
-
-      // ---- Process ----
-      onPhase("process", "Processing files...");
-      let processedFiles = await this.processFiles(files);
-      logger.info(`Processed ${processedFiles.length} files`);
-
-      // POST_PROCESS / PRE_GENERATE hooks.
-      processedFiles =
-        ((await this.plugins.executeHook(
-          HookPoint.POST_PROCESS,
-          processedFiles,
-          this.config,
-        )) as ProcessedFile[]) ?? processedFiles;
-      processedFiles =
-        ((await this.plugins.executeHook(
-          HookPoint.PRE_GENERATE,
-          processedFiles,
-          this.config,
-        )) as ProcessedFile[]) ?? processedFiles;
-
-      // ---- Generate ----
-      // POST_GENERATE fires inside the generator so plugins can transform the
-      // HTML (e.g. inject CSS) before it is rendered to PDF.
+      const { processedFiles, repoInfo } = await this.runPipeline(options);
+      const onPhase = options.onPhase ?? (() => {});
       onPhase("generate", "Generating PDF...");
       const result = await this.generate(processedFiles, repoInfo);
-
       await this.cleanup();
       return result;
     } catch (error) {
@@ -127,6 +77,116 @@ export class Repo2PDF {
       logger.debug("Error converting repository:", error);
       throw error;
     }
+  }
+
+  /**
+   * Convert the configured repository and return the PDF as bytes, without
+   * writing to disk.
+   *
+   * @remarks
+   * Use this in serverless/edge/HTTP contexts where you want to stream the PDF
+   * in a response rather than write a file. The fetch/process steps still use
+   * whatever fetcher the config selects (the `local` fetcher needs `fs`); to run
+   * the renderer alone on a runtime without `fs`, fetch files yourself and call
+   * {@link PDFGenerator.generateToBytes} or `PdfLibRenderer.render` directly.
+   *
+   * @returns The rendered PDF as a `Uint8Array`.
+   */
+  public async convertToBytes(
+    options: ConvertOptions = {},
+  ): Promise<Uint8Array> {
+    try {
+      const { processedFiles, repoInfo } = await this.runPipeline(options);
+      const onPhase = options.onPhase ?? (() => {});
+      onPhase("generate", "Generating PDF...");
+
+      if (this.plugins.hasHookHandlers(HookPoint.CUSTOM_GENERATOR)) {
+        const custom = (await this.plugins.executeHook(
+          HookPoint.CUSTOM_GENERATOR,
+          processedFiles,
+          this.config,
+        )) as GenerationResult;
+        // A custom generator writes its own output; read it back as bytes.
+        return new Uint8Array(fs.readFileSync(custom.outputPath));
+      }
+
+      const pdfGenerator = new PDFGenerator(this.config, {
+        plugins: this.plugins,
+      });
+      const bytes = await pdfGenerator.generateToBytes(
+        processedFiles,
+        repoInfo,
+      );
+      await this.cleanup();
+      return bytes;
+    } catch (error) {
+      await this.cleanup();
+      logger.debug("Error converting repository:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run the fetch → process pipeline (everything up to, but not including,
+   * generation), firing all lifecycle plugin hooks along the way.
+   */
+  private async runPipeline(
+    options: ConvertOptions,
+  ): Promise<{ processedFiles: ProcessedFile[]; repoInfo: RepositoryInfo }> {
+    const onPhase = options.onPhase ?? (() => {});
+
+    // Initialize the plugin system (no-op runner if disabled).
+    this.plugins = await this.initializePlugins();
+
+    // PRE_FETCH: plugins may modify config before anything happens.
+    this.config =
+      ((await this.plugins.executeHook(
+        HookPoint.PRE_FETCH,
+        this.config,
+      )) as Config) ?? this.config;
+
+    // ---- Fetch ----
+    onPhase("fetch", "Fetching repository...");
+    let files = await this.fetchFiles();
+
+    // POST_FETCH: plugins may add/remove/modify fetched files.
+    files =
+      ((await this.plugins.executeHook(
+        HookPoint.POST_FETCH,
+        files,
+        this.config,
+      )) as RepoFile[]) ?? files;
+
+    const repoInfo = await this.getRepositoryInfo();
+
+    // PRE_PROCESS: last chance to modify the file list before processing.
+    files =
+      ((await this.plugins.executeHook(
+        HookPoint.PRE_PROCESS,
+        files,
+        this.config,
+      )) as RepoFile[]) ?? files;
+
+    // ---- Process ----
+    onPhase("process", "Processing files...");
+    let processedFiles = await this.processFiles(files);
+    logger.info(`Processed ${processedFiles.length} files`);
+
+    // POST_PROCESS / PRE_GENERATE hooks.
+    processedFiles =
+      ((await this.plugins.executeHook(
+        HookPoint.POST_PROCESS,
+        processedFiles,
+        this.config,
+      )) as ProcessedFile[]) ?? processedFiles;
+    processedFiles =
+      ((await this.plugins.executeHook(
+        HookPoint.PRE_GENERATE,
+        processedFiles,
+        this.config,
+      )) as ProcessedFile[]) ?? processedFiles;
+
+    return { processedFiles, repoInfo };
   }
 
   /**
@@ -225,7 +285,9 @@ export class Repo2PDF {
       return custom;
     }
 
-    const pdfGenerator = new PDFGenerator(this.config, this.plugins);
+    const pdfGenerator = new PDFGenerator(this.config, {
+      plugins: this.plugins,
+    });
     const result = await pdfGenerator.generatePDF(
       processedFiles,
       repoInfo,
@@ -326,8 +388,31 @@ export { logger } from "./utils/logger";
 export { ErrorHandler } from "./utils/error-handler";
 export { CacheManager } from "./utils/cache-manager";
 
+// Export the rendering layer so it can be used standalone (e.g. on edge/serverless
+// runtimes: fetch files yourself, then render to bytes with no filesystem access).
+export { PDFGenerator } from "./generators/pdf-generator";
+export type { PdfGeneratorOptions } from "./generators/pdf-generator";
+export { PdfLibRenderer } from "./renderers/pdf-lib-renderer";
+export type {
+  PdfRenderer,
+  RenderRepoInfo,
+} from "./renderers/renderer.interface";
+export type {
+  Tokenizer,
+  TokenizedLine,
+  SyntaxToken,
+} from "./renderers/tokenizer.interface";
+export {
+  resolveTokenizer,
+  PlainTokenizer,
+  ShikiTokenizer,
+} from "./renderers/tokenizers";
+
 /**
- * Convert a repository to PDF using a partial configuration (programmatic API).
+ * Convert a repository to a PDF file on disk (programmatic API).
+ *
+ * @param config - Partial configuration; merged over defaults.
+ * @returns The generation result (output path, size, timing).
  */
 export async function convertRepository(
   config: Partial<Config>,
@@ -337,6 +422,30 @@ export async function convertRepository(
     const fullConfig = await configLoader.loadConfig(config);
     const repo2pdf = new Repo2PDF(fullConfig);
     return await repo2pdf.convert();
+  } catch (error) {
+    logger.debug("Error converting repository:", error);
+    throw error;
+  }
+}
+
+/**
+ * Convert a repository and return the PDF as bytes, without writing to disk.
+ *
+ * @remarks
+ * Ideal for serverless / HTTP handlers — return the bytes directly in the
+ * response. The fetch step still uses the configured fetcher.
+ *
+ * @param config - Partial configuration; merged over defaults.
+ * @returns The rendered PDF as a `Uint8Array`.
+ */
+export async function convertRepositoryToBytes(
+  config: Partial<Config>,
+): Promise<Uint8Array> {
+  try {
+    const configLoader = ConfigLoader.getInstance();
+    const fullConfig = await configLoader.loadConfig(config);
+    const repo2pdf = new Repo2PDF(fullConfig);
+    return await repo2pdf.convertToBytes();
   } catch (error) {
     logger.debug("Error converting repository:", error);
     throw error;

@@ -1,0 +1,31 @@
+# Dependencies & build output
+node_modules/
+dist/
+build/
+coverage/
+
+# Lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Test fixtures — cloned submodule repos and procedurally generated fixtures.
+# These are third-party / generated and must never be reformatted.
+tests/fixtures/test-repos/
+tests/fixtures/edge-cases/
+tests/fixtures/multi-language/
+tests/fixtures/synthetic-large/
+tests/output/
+
+# Bundled binary assets (fonts) and machine-generated data.
+src/renderers/fonts/*.ttf
+src/renderers/fonts/*.otf
+src/renderers/icons/icon-data.ts
+
+# Generated preview artifact
+examples/preview/
+
+# Misc
+*.pdf
+*.png
+.git/

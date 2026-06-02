@@ -8,10 +8,7 @@ import { noopPluginRunner } from "../src/plugins/plugin-runner";
 import { Logger } from "../src/utils/logger";
 import { FileProcessor } from "../src/processors/file-processor";
 import { CodeProcessor } from "../src/processors/code-processor";
-import {
-  createTestConfig,
-  createMockRepoFile,
-} from "./helpers/test-utils";
+import { createTestConfig, createMockRepoFile } from "./helpers/test-utils";
 
 /**
  * A Logger that swallows output so the plugin error-isolation tests (which
@@ -228,9 +225,7 @@ describe("PluginManager hasHookHandlers / getHookHandlers", () => {
       }),
     );
     // Declares but does not implement -> must NOT count.
-    manager.registerPlugin(
-      makePlugin("c", [HookPoint.PRE_FETCH], {}),
-    );
+    manager.registerPlugin(makePlugin("c", [HookPoint.PRE_FETCH], {}));
 
     expect(manager.hasHookHandlers(HookPoint.FILTER_FILE)).toBe(true);
     expect(manager.hasHookHandlers(HookPoint.TRANSFORM_CONTENT)).toBe(true);

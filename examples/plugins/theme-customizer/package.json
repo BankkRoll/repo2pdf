@@ -14,7 +14,7 @@
     "styling"
   ],
   "repo2pdfHooks": [
-    "postGenerate"
+    "preFetch"
   ],
   "devDependencies": {
     "@types/node": "^20.0.0",

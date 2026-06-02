@@ -2,6 +2,10 @@
 
 repo2pdf can be configured via CLI options, configuration files, or programmatically.
 
+PDF generation is pure JavaScript (via [pdf-lib](https://pdf-lib.js.org/)) — there is
+no Chromium, Puppeteer, or browser involved, and no HTML/CSS output. Appearance is
+controlled by `style.theme`, `style.highlight`, and `style.fonts`.
+
 ## Configuration Files
 
 repo2pdf looks for configuration in these locations (in order):
@@ -35,12 +39,12 @@ module.exports = {
     },
   },
   style: {
-    theme: "github-dark",
+    theme: "github-light",
+    highlight: "auto",
     lineNumbers: true,
     pageNumbers: true,
     includeTableOfContents: true,
     fontSize: "12px",
-    fontFamily: "monospace",
   },
   processing: {
     ignorePatterns: [
@@ -161,14 +165,28 @@ interface OutputOptions {
 
 ```typescript
 interface StyleOptions {
-  /** Syntax highlighting theme */
+  /** Syntax highlighting theme (default: 'github-light') */
   theme: ThemeType;
 
-  /** Font size (e.g., '12px', '14pt') */
-  fontSize?: string;
+  /**
+   * How syntax highlighting is resolved (default: 'auto').
+   * - 'auto'  - use Shiki when it can load (Node), else fall back to plain text
+   * - 'shiki' - force Shiki (fails if it cannot be loaded)
+   * - 'none'  - never highlight; universal, dependency-free, edge-safe
+   */
+  highlight?: "auto" | "shiki" | "none";
 
-  /** Font family */
-  fontFamily?: string;
+  /**
+   * Per-role font overrides for the PDF renderer. Each role accepts raw font
+   * bytes (.ttf/.otf as a Uint8Array). Any role left undefined uses repo2pdf's
+   * bundled default (Inter for UI text, JetBrains Mono for code). Supplying bytes
+   * is also how rendering works on runtimes without `fs` (edge, browser) — import
+   * or fetch the font and pass the bytes in.
+   */
+  fonts?: FontSet;
+
+  /** Font size for code (e.g., '12px', '14pt') */
+  fontSize?: string;
 
   /** Show line numbers */
   lineNumbers: boolean;
@@ -179,10 +197,41 @@ interface StyleOptions {
   /** Generate table of contents */
   includeTableOfContents: boolean;
 
-  /** Custom CSS to inject */
+  /**
+   * @deprecated No-op in the pure-JS renderer. There is no HTML/CSS layer to
+   * style — use `theme`, `fonts`, and `highlight` instead. Accepted for backward
+   * compatibility but ignored.
+   */
+  fontFamily?: string;
+
+  /**
+   * @deprecated No-op in the pure-JS renderer. The PDF is drawn directly with
+   * pdf-lib, so there is no CSS to inject. Accepted for backward compatibility
+   * but ignored.
+   */
   customCSS?: string;
 }
+
+interface FontSet {
+  /** UI/body text (default: Inter Regular). */
+  sans?: Uint8Array;
+  /** Semibold UI text (default: Inter SemiBold). */
+  sansSemibold?: Uint8Array;
+  /** Bold UI text / titles (default: Inter Bold). */
+  sansBold?: Uint8Array;
+  /** Code text (default: JetBrains Mono Regular). */
+  mono?: Uint8Array;
+  /** Bold code / file paths (default: JetBrains Mono Bold). */
+  monoBold?: Uint8Array;
+  /** Italic code / comments (default: JetBrains Mono Italic). */
+  monoItalic?: Uint8Array;
+}
 ```
+
+> **PDF rendering is pure JavaScript** (via [pdf-lib](https://pdf-lib.js.org/)) — no
+> Chromium, Puppeteer, or browser is involved. As a result there is no HTML/CSS
+> output: visual appearance is controlled by `theme`, `highlight`, and `fonts`,
+> not by `customCSS` or `fontFamily`.
 
 ### Processing Options
 
@@ -232,6 +281,23 @@ interface CacheOptions {
 }
 ```
 
+### Plugin Options
+
+```typescript
+interface PluginOptions {
+  /** Whether the plugin system is enabled (default: true) */
+  enabled?: boolean;
+
+  /** Additional directories to search for plugins */
+  directories?: string[];
+
+  /** Plugin names to disable after loading */
+  disabled?: string[];
+}
+```
+
+See the [Plugins guide](./plugins.md) for the available hooks and how to author plugins.
+
 ### Full Config
 
 ```typescript
@@ -241,6 +307,7 @@ interface Config {
   style: StyleOptions;
   processing: ProcessingOptions;
   cache: CacheOptions;
+  plugins?: PluginOptions;
   debug: boolean;
 }
 ```
@@ -295,6 +362,7 @@ Override configuration with environment variables:
   },
   style: {
     theme: 'github-light',
+    highlight: 'auto',
     lineNumbers: true,
     pageNumbers: true,
     includeTableOfContents: true,
@@ -419,41 +487,46 @@ module.exports = {
 module.exports = {
   style: {
     theme: "tokyo-night",
+    highlight: "auto",
     lineNumbers: true,
     pageNumbers: true,
     includeTableOfContents: true,
     fontSize: "13px",
-    fontFamily: '"Fira Code", "JetBrains Mono", monospace',
-    customCSS: `
-      /* Rounded corners */
-      .file-container {
-        border-radius: 8px;
-        overflow: hidden;
-        margin-bottom: 20px;
-      }
+  },
+};
+```
 
-      /* File header styling */
-      .file-header {
-        padding: 12px 16px;
-        font-size: 13px;
-      }
+### Custom Fonts Config
 
-      /* Code block padding */
-      .code-content {
-        padding: 16px;
-      }
+Override the bundled fonts by passing raw `.ttf`/`.otf` bytes. Any role you leave
+out keeps repo2pdf's default (Inter for UI, JetBrains Mono for code).
 
-      /* TOC styling */
-      .toc-item {
-        padding: 4px 0;
-      }
+```javascript
+// repo2pdf.config.js
+const fs = require("node:fs");
 
-      /* Page break before each file */
-      .file-container {
-        page-break-before: auto;
-        page-break-inside: avoid;
-      }
-    `,
+module.exports = {
+  style: {
+    theme: "github-light",
+    fonts: {
+      mono: fs.readFileSync("./fonts/FiraCode-Regular.ttf"),
+      monoBold: fs.readFileSync("./fonts/FiraCode-Bold.ttf"),
+    },
+  },
+};
+```
+
+### Highlight-Free / Edge-Safe Config
+
+Disable highlighting entirely for a universal, dependency-free render (no Shiki).
+Useful for serverless and edge runtimes.
+
+```javascript
+// repo2pdf.config.js
+module.exports = {
+  style: {
+    theme: "github-light",
+    highlight: "none",
   },
 };
 ```

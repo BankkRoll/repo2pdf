@@ -17,11 +17,13 @@ Convert any repository to a beautiful PDF with syntax highlighting, table of con
 
 ## Features
 
+- **Pure JavaScript** - PDFs are rendered with [pdf-lib](https://pdf-lib.js.org). No Chromium, no Puppeteer, no native modules
+- **Runs Anywhere** - Node, serverless (Vercel, Netlify, Lambda), edge (Cloudflare, Vercel Edge), and the browser
 - **Multiple Sources** - GitHub, GitLab, Bitbucket, or local directories
-- **Syntax Highlighting** - 300+ languages powered by Shiki (VS Code's engine)
-- **10+ Themes** - GitHub Dark, Dracula, Nord, Tokyo Night, and more
+- **Optional Syntax Highlighting** - Powered by Shiki (VS Code's engine) when available, with a zero-dependency plain-text fallback
+- **Configurable Fonts** - Bundled Inter and JetBrains Mono (OFL), or supply your own font bytes
+- **10+ Themes** - GitHub Light (default), GitHub Dark, Dracula, Nord, Tokyo Night, and more
 - **Table of Contents** - GitHub-style file tree with folder/file icons
-- **Full-Bleed PDF** - Edge-to-edge backgrounds, no white borders
 - **Plugin System** - Extend functionality with custom plugins
 - **Smart Caching** - Faster repeated conversions
 
@@ -108,20 +110,46 @@ const result = await convertRepository({
 console.log(`PDF generated: ${result.outputPath}`);
 ```
 
-See [Programmatic API](./docs/programmatic.md) for full documentation.
+### Use Anywhere (serverless / edge)
+
+Because rendering is pure JavaScript, you can return a PDF straight from an HTTP
+handler with `convertRepositoryToBytes` — it runs the same pipeline but returns
+the PDF bytes instead of writing a file:
+
+```typescript
+// app/api/pdf/route.ts (Next.js App Router)
+import { convertRepositoryToBytes } from "repo2pdf";
+
+export async function GET() {
+  const bytes = await convertRepositoryToBytes({
+    repository: { url: "https://github.com/user/repo" },
+    output: { format: "pdf", outputPath: "repo.pdf", singleFile: true },
+  });
+
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'inline; filename="repo.pdf"',
+    },
+  });
+}
+```
+
+See [Programmatic API](./docs/programmatic.md) for full documentation, including
+true-edge rendering with `PDFGenerator` / `PdfLibRenderer`.
 
 ## Themes
 
-| Dark                    | Light                      |
-| ----------------------- | -------------------------- |
-| `github-dark`           | `github-light` (default)   |
-| `dracula`               | `solarized-light`          |
-| `nord`                  |                            |
-| `monokai`               |                   |
-| `one-dark-pro`          |                   |
-| `tokyo-night`           |                   |
-| `solarized-dark`        |                   |
-| `vitesse-dark`          |                   |
+| Dark             | Light                    |
+| ---------------- | ------------------------ |
+| `github-dark`    | `github-light` (default) |
+| `dracula`        | `solarized-light`        |
+| `nord`           |                          |
+| `monokai`        |                          |
+| `one-dark-pro`   |                          |
+| `tokyo-night`    |                          |
+| `solarized-dark` |                          |
+| `vitesse-dark`   |                          |
 
 See [Themes](./docs/themes.md) for previews and customization.
 
@@ -172,14 +200,17 @@ See [Plugins](./docs/plugins.md) for the full development guide.
 
 ### Example Plugins
 
-- **[syntax-highlighter](./examples/plugins/syntax-highlighter)** - Custom syntax highlighting
-- **[theme-customizer](./examples/plugins/theme-customizer)** - CSS theme injection
-- **[file-filter](./examples/plugins/file-filter)** - Advanced file filtering
+- **[file-filter](./examples/plugins/file-filter)** - Advanced file filtering (`FILTER_FILE`)
+- **[theme-customizer](./examples/plugins/theme-customizer)** - Set theme, highlight mode, and other style options (`PRE_FETCH`)
+- **[secret-redactor](./examples/plugins/secret-redactor)** - Redact secrets from file content (`TRANSFORM_CONTENT`)
 
 ## Requirements
 
-- Node.js >= 18.0.0
-- Git (for cloning repositories)
+- **Node.js >= 18.0.0** for the CLI and the file-writing API (`convertRepository`)
+
+That is the only requirement. There is no Chromium, Puppeteer, or native-module
+dependency. The renderer is pure JavaScript, so it also runs in serverless, edge,
+and browser runtimes — see [Use Anywhere](#use-anywhere-serverless--edge).
 
 ## License
 

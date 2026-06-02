@@ -243,9 +243,9 @@ export function formatFileSize(bytes: number): string {
  * @param files - Files to organize (any object carrying `path` and `name`)
  * @returns Sorted map of directory path -> files in that directory
  */
-export function organizeFilesByDirectory<T extends { path: string; name: string }>(
-  files: T[],
-): Record<string, T[]> {
+export function organizeFilesByDirectory<
+  T extends { path: string; name: string },
+>(files: T[]): Record<string, T[]> {
   const directories: Record<string, T[]> = {};
 
   for (const file of files) {
@@ -262,7 +262,9 @@ export function organizeFilesByDirectory<T extends { path: string; name: string 
 
   // Sort directories by path and files within each directory by name
   const sorted: Record<string, T[]> = {};
-  for (const dir of Object.keys(directories).sort((a, b) => a.localeCompare(b))) {
+  for (const dir of Object.keys(directories).sort((a, b) =>
+    a.localeCompare(b),
+  )) {
     sorted[dir] = directories[dir].sort((a, b) => a.name.localeCompare(b.name));
   }
 

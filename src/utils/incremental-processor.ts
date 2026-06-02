@@ -40,8 +40,8 @@ export class IncrementalProcessor {
   public async processFilesIncrementally(
     files: RepoFile[],
   ): Promise<ProcessedFile[]> {
-    if (files.length <= this.chunkSize || !this.tempDir) {
-      // For small repositories or if temp dir is not available, process all at once
+    if (files.length <= this.chunkSize) {
+      // For small repositories, process all at once
       logger.info(`Processing ${files.length} files in a single batch`);
       return this.fileProcessor.processFiles(files);
     }
@@ -56,7 +56,10 @@ export class IncrementalProcessor {
       chunks.push(files.slice(i, i + this.chunkSize));
     }
 
-    const allProcessedFiles: ProcessedFile[] = [];
+    // For memory efficiency we don't keep every processed file in memory while
+    // running; each chunk is flushed to disk and reloaded at the end. The final
+    // chunk is held in memory so it can be reused without a round-trip to disk.
+    let lastChunk: ProcessedFile[] = [];
 
     // Process each chunk
     for (let i = 0; i < chunks.length; i++) {
@@ -72,22 +75,21 @@ export class IncrementalProcessor {
       const chunkId = this.saveChunk(processedChunk, i);
       this.processedChunks.push(chunkId);
 
-      // For memory efficiency, we don't keep all processed files in memory
-      // Instead, we'll load them from disk when needed
       if (i === chunks.length - 1) {
-        // For the last chunk, keep it in memory for immediate use
-        allProcessedFiles.push(...processedChunk);
+        // Keep the last chunk in memory for immediate use.
+        lastChunk = processedChunk;
       }
     }
 
-    // If we have chunks saved to disk, load them all
-    if (this.processedChunks.length > 1) {
-      for (let i = 0; i < this.processedChunks.length - 1; i++) {
-        const chunkId = this.processedChunks[i];
-        const chunk = this.loadChunk(chunkId);
-        allProcessedFiles.unshift(...chunk); // Add to beginning to maintain order
-      }
+    // Reconstruct in forward order: load earlier chunks (0..n-2) from disk and
+    // append in sequence, then append the in-memory last chunk. Using push (O(n))
+    // instead of unshift avoids the quadratic cost of repeated front insertions.
+    const allProcessedFiles: ProcessedFile[] = [];
+    for (let i = 0; i < this.processedChunks.length - 1; i++) {
+      const chunk = this.loadChunk(this.processedChunks[i]);
+      allProcessedFiles.push(...chunk);
     }
+    allProcessedFiles.push(...lastChunk);
 
     logger.info(`Completed incremental processing of ${files.length} files`);
     return allProcessedFiles;

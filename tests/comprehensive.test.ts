@@ -61,9 +61,7 @@ const REAL_CLONES_ENABLED = process.env.ENABLE_REAL_CLONES === "true";
  * Check if a test repository is available (and real-clone tests are enabled).
  */
 function repoExists(name: string): boolean {
-  return (
-    REAL_CLONES_ENABLED && fs.existsSync(path.join(TEST_REPOS_DIR, name))
-  );
+  return REAL_CLONES_ENABLED && fs.existsSync(path.join(TEST_REPOS_DIR, name));
 }
 
 /**
@@ -743,7 +741,10 @@ describe("Comprehensive Test Suite", () => {
         `perm-repo-${Date.now()}`,
       );
       fs.mkdirSync(tmpRepo, { recursive: true });
-      fs.writeFileSync(path.join(tmpRepo, "readable.ts"), "export const a = 1;\n");
+      fs.writeFileSync(
+        path.join(tmpRepo, "readable.ts"),
+        "export const a = 1;\n",
+      );
       const restricted = path.join(tmpRepo, "restricted.ts");
       fs.writeFileSync(restricted, "export const secret = 2;\n");
 

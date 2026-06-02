@@ -128,7 +128,7 @@ export function createMockProcessedFile(
     extension: "ts",
     language: "typescript",
     processedContent: 'const x: string = "hello";',
-    highlightedHtml: '<pre class="shiki">const x: string = "hello";</pre>',
+    isDirectory: false,
     ...overrides,
   };
 }

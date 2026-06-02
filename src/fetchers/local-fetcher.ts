@@ -71,7 +71,9 @@ export class LocalFetcher implements RepositoryFetcher {
             }
             return line.trim();
           })
-          .filter((line) => line && !line.startsWith("#") && !line.startsWith("!"));
+          .filter(
+            (line) => line && !line.startsWith("#") && !line.startsWith("!"),
+          );
       }
     } catch (error) {
       logger.warn("Failed to read .gitignore file:", error);
@@ -189,11 +191,33 @@ export class LocalFetcher implements RepositoryFetcher {
   }
 
   /**
+   * Resolve a repo-relative path to an absolute path and verify it stays inside
+   * the repository root. Guards against path-traversal (`../../etc/passwd`).
+   *
+   * @param relativePath - Path relative to the repository root.
+   * @returns The validated absolute path.
+   * @throws If the resolved path escapes the repository root.
+   */
+  private resolveWithinBase(relativePath: string): string {
+    const base = path.resolve(this.basePath);
+    const resolved = path.resolve(base, relativePath);
+    const rel = path.relative(base, resolved);
+    if (
+      rel === ".." ||
+      rel.startsWith(".." + path.sep) ||
+      path.isAbsolute(rel)
+    ) {
+      throw new Error(`Path escapes repository root: ${relativePath}`);
+    }
+    return resolved;
+  }
+
+  /**
    * Fetch a specific file from the repository
    */
   public async fetchFile(relativePath: string): Promise<RepoFile> {
     try {
-      const filePath = path.join(this.basePath, relativePath);
+      const filePath = this.resolveWithinBase(relativePath);
       const stats = await statAsync(filePath);
 
       const extension = extractExtension(relativePath);
@@ -254,19 +278,22 @@ export class LocalFetcher implements RepositoryFetcher {
     lastUpdated?: Date;
     url: string;
   }> {
+    // Prefer an explicitly-configured URL (e.g. the canonical remote) so the
+    // generated PDF never leaks a local filesystem path. Fall back to file://.
+    const url = this.options.url || `file://${this.basePath}`;
     try {
       const stats = await statAsync(this.basePath);
 
       return {
         name: path.basename(this.basePath),
         lastUpdated: stats.mtime,
-        url: `file://${this.basePath}`,
+        url,
       };
     } catch (error) {
       logger.error("Error fetching repository info:", error);
       return {
         name: path.basename(this.basePath),
-        url: `file://${this.basePath}`,
+        url,
       };
     }
   }

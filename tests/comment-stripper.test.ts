@@ -22,7 +22,10 @@ describe("stripComments — C-like languages", () => {
   });
 
   it("preserves // inside a double-quoted string (the classic bug)", () => {
-    const out = stripComments('const url = "https://example.com";', "typescript");
+    const out = stripComments(
+      'const url = "https://example.com";',
+      "typescript",
+    );
     expect(out).toContain("https://example.com");
   });
 

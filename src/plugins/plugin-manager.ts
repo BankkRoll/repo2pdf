@@ -312,9 +312,14 @@ export class PluginManager extends EventEmitter {
         return;
       }
 
-      // Load the plugin module
-      const pluginMain = path.join(pluginPath, packageJson.main);
-      const pluginModule = await import(pluginMain);
+      // Load the plugin module, guarding against a `main` that escapes the
+      // plugin directory via path traversal.
+      const mainPath = path.resolve(pluginPath, packageJson.main);
+      if (!mainPath.startsWith(path.resolve(pluginPath) + path.sep)) {
+        this.logger.warn(`Plugin main escapes plugin dir: ${pluginPath}`);
+        return;
+      }
+      const pluginModule = await import(mainPath);
 
       // Register the plugin
       this.registerPlugin({

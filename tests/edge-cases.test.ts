@@ -16,6 +16,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import path from "path";
 import { LocalFetcher } from "../src/fetchers/local-fetcher";
 import { FileProcessor } from "../src/processors/file-processor";
+import { PDFGenerator } from "../src/generators/pdf-generator";
 import { Repo2PDF } from "../src/index";
 import type { RepoFile, ProcessedFile } from "../src/types/file.types";
 import {
@@ -125,7 +126,9 @@ describe("Edge-case fixtures", () => {
       expect(emptyProcessed.name).toBe("empty.txt");
       expect(typeof emptyProcessed.processedContent).toBe("string");
       // The wrapper substitutes an "Error processing file:" placeholder.
-      expect(emptyProcessed.processedContent).toContain("Error processing file");
+      expect(emptyProcessed.processedContent).toContain(
+        "Error processing file",
+      );
     });
 
     it("rejects at the single-file processFile() level for empty content (actual behavior)", async () => {
@@ -156,7 +159,7 @@ describe("Edge-case fixtures", () => {
   });
 
   describe("Very long line handling", () => {
-    it("processes the 15k-char long line without error", async () => {
+    it("processes the 15k-char long line and renders to a valid PDF", async () => {
       const longLine = byName(files, "long-line.js");
       expect(longLine).toBeDefined();
       expect((longLine!.content as string).length).toBeGreaterThan(15000);
@@ -165,11 +168,23 @@ describe("Edge-case fixtures", () => {
       const processor = new FileProcessor(config);
       const processed = await processor.processFile(longLine!);
 
+      // Content survives processing verbatim (no highlighting at this stage).
+      expect(typeof processed.processedContent).toBe("string");
       expect(processed.processedContent).toContain("x".repeat(1000));
-      // Highlighting should not have crashed; some HTML was produced.
-      expect(typeof processed.highlightedHtml).toBe("string");
-      expect(processed.highlightedHtml!.length).toBeGreaterThan(0);
-    });
+
+      // The renderer (which now performs tokenization) must not crash on a
+      // pathologically long line — assert it produces a real PDF.
+      const generator = new PDFGenerator(config);
+      const bytes = await generator.generateToBytes([processed], {
+        name: "edge-cases",
+        description: "Edge case fixtures",
+        url: "",
+      });
+      expect(bytes.length).toBeGreaterThan(0);
+      // A real PDF starts with the "%PDF-" magic bytes.
+      const header = Buffer.from(bytes.slice(0, 5)).toString("latin1");
+      expect(header).toBe("%PDF-");
+    }, 120000);
   });
 
   describe("Hidden dotfile handling", () => {
@@ -270,30 +285,26 @@ describe("Edge-case fixtures", () => {
   });
 
   describe("Full pipeline (single PDF over edge cases)", () => {
-    it(
-      "converts the edge-case repo to a valid PDF end-to-end",
-      async () => {
-        const outputPath = getUniqueOutputPath("edge-cases-e2e");
-        const config = createLocalRepoConfig(EDGE_CASES_DIR, {
-          output: {
-            format: "pdf",
-            outputPath,
-            singleFile: true,
-            pageSize: "A4",
-            landscape: false,
-            margin: { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" },
-          },
-        });
+    it("converts the edge-case repo to a valid PDF end-to-end", async () => {
+      const outputPath = getUniqueOutputPath("edge-cases-e2e");
+      const config = createLocalRepoConfig(EDGE_CASES_DIR, {
+        output: {
+          format: "pdf",
+          outputPath,
+          singleFile: true,
+          pageSize: "A4",
+          landscape: false,
+          margin: { top: "1cm", right: "1cm", bottom: "1cm", left: "1cm" },
+        },
+      });
 
-        const repo2pdf = new Repo2PDF(config);
-        const result = await repo2pdf.convert();
+      const repo2pdf = new Repo2PDF(config);
+      const result = await repo2pdf.convert();
 
-        expect(result.success).toBe(true);
-        expect(result.outputPath).toBe(outputPath);
-        expect(result.fileSize).toBeGreaterThan(0);
-        expect(pdfExists(outputPath)).toBe(true);
-      },
-      120000,
-    );
+      expect(result.success).toBe(true);
+      expect(result.outputPath).toBe(outputPath);
+      expect(result.fileSize).toBeGreaterThan(0);
+      expect(pdfExists(outputPath)).toBe(true);
+    }, 120000);
   });
 });

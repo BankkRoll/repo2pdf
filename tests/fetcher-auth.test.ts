@@ -11,14 +11,7 @@
  * level so no real GitHub HTTP is ever performed.
  */
 
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-  afterEach,
-} from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock @octokit/rest so NO real GitHub HTTP ever happens. Every `new Octokit()`
 // returns a controllable fake; the constructor records the options it was
@@ -56,7 +49,11 @@ import type { RepositoryOptions } from "../src/types/config.types";
  */
 function makeResponse(
   body: unknown,
-  init: { ok?: boolean; status?: number; headers?: Record<string, string> } = {},
+  init: {
+    ok?: boolean;
+    status?: number;
+    headers?: Record<string, string>;
+  } = {},
 ): Response {
   const headerMap = init.headers ?? {};
   return {
@@ -66,7 +63,8 @@ function makeResponse(
     text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
     arrayBuffer: async () => new ArrayBuffer(0),
     headers: {
-      get: (name: string) => headerMap[name] ?? headerMap[name.toLowerCase()] ?? null,
+      get: (name: string) =>
+        headerMap[name] ?? headerMap[name.toLowerCase()] ?? null,
     },
   } as unknown as Response;
 }
@@ -392,7 +390,9 @@ describe("GitHubFetcher auth & default-branch detection (Octokit mocked)", () =>
 
     // The no-token branch builds `new Octokit()` (opts undefined / no auth).
     expect(
-      octokitConstructorCalls.some((c) => c === undefined || c?.auth === undefined),
+      octokitConstructorCalls.some(
+        (c) => c === undefined || c?.auth === undefined,
+      ),
     ).toBe(true);
     // Explicit branch is honored without any repos.get default-branch lookup.
     expect((fetcher as any).branch).toBe("explicit");

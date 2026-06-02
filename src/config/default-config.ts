@@ -37,6 +37,7 @@ export const defaultConfig: Config = {
     lineNumbers: true,
     pageNumbers: true,
     includeTableOfContents: true,
+    highlight: "auto",
     customCSS: "",
   },
   processing: {

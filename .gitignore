@@ -65,6 +65,9 @@ tempRepo/
 .repo2pdf-cache/
 .repo2pdf-temp/
 
+# Claude Code harness runtime artifacts
+.claude/
+
 # ──────────────────────────────────────────────────────────────
 # Test artifacts
 # ──────────────────────────────────────────────────────────────

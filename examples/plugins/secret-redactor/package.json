@@ -1,23 +1,21 @@
 {
-  "name": "repo2pdf-plugin-syntax-highlighter",
+  "name": "repo2pdf-plugin-secret-redactor",
   "version": "1.0.0",
-  "description": "Syntax highlighting plugin for repo2pdf using highlight.js",
+  "description": "Redact secrets (API keys, tokens, passwords, private keys) from repo2pdf output via the transformContent hook",
   "main": "index.js",
   "types": "index.d.ts",
-  "author": "repo2pdf Team",
+  "author": "repo2pdf",
   "license": "MIT",
   "keywords": [
     "repo2pdf",
     "plugin",
-    "syntax-highlighting",
-    "highlight.js"
+    "security",
+    "redact",
+    "secrets"
   ],
   "repo2pdfHooks": [
     "transformContent"
   ],
-  "dependencies": {
-    "highlight.js": "^11.9.0"
-  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
@@ -31,6 +29,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/BankkRoll/repo2pdf",
-    "directory": "examples/plugins/syntax-highlighter"
+    "directory": "examples/plugins/secret-redactor"
   }
 }

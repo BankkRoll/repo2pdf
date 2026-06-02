@@ -67,11 +67,47 @@ export interface OutputOptions {
 }
 
 /**
+ * Per-role font overrides for the PDF renderer.
+ *
+ * @remarks
+ * Each role accepts raw font bytes (`.ttf`/`.otf` as a `Uint8Array`). Any role
+ * left undefined uses repo2pdf's bundled default (Inter / JetBrains Mono).
+ * Supplying bytes is also how rendering works on runtimes without `fs` (edge,
+ * browser): import or fetch the font and pass the bytes in.
+ */
+export interface FontSet {
+  /** UI/body text (default: Inter Regular). */
+  sans?: Uint8Array;
+  /** Semibold UI text (default: Inter SemiBold). */
+  sansSemibold?: Uint8Array;
+  /** Bold UI text / titles (default: Inter Bold). */
+  sansBold?: Uint8Array;
+  /** Code text (default: JetBrains Mono Regular). */
+  mono?: Uint8Array;
+  /** Bold code / file paths (default: JetBrains Mono Bold). */
+  monoBold?: Uint8Array;
+  /** Italic code / comments (default: JetBrains Mono Italic). */
+  monoItalic?: Uint8Array;
+}
+
+/**
+ * How syntax highlighting is resolved.
+ * - `auto` (default): use Shiki when it can load (Node), else plain text.
+ * - `shiki`: force Shiki (fails if unavailable).
+ * - `none`: never highlight — universal, dependency-free, edge-safe.
+ */
+export type HighlightMode = "auto" | "shiki" | "none";
+
+/**
  * Options for styling the generated output.
  */
 export interface StyleOptions {
   /** Syntax highlighting theme to use */
   theme: ThemeType;
+  /** How to resolve syntax highlighting (default: "auto"). */
+  highlight?: HighlightMode;
+  /** Optional font overrides for the PDF renderer. */
+  fonts?: FontSet;
   /** Font size for code (e.g., "12px", "14pt") */
   fontSize?: string;
   /** Font family for code (e.g., "Fira Code", "monospace") */

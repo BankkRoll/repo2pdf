@@ -24,7 +24,7 @@ export class FileProcessor {
     this.config = config;
     this.plugins = plugins;
     this.codeProcessor = new CodeProcessor(config, plugins);
-    this.imageProcessor = new ImageProcessor(config);
+    this.imageProcessor = new ImageProcessor();
     this.binaryProcessor = new BinaryProcessor(config);
   }
 
@@ -46,10 +46,11 @@ export class FileProcessor {
           logger.error(`Error processing file ${file.path}:`, error);
           // Return a minimal processed file on error so one bad file doesn't
           // abort the whole run.
-          return {
+          const fallback: ProcessedFile = {
             ...file,
             processedContent: `Error processing file: ${(error as Error).message}`,
-          } as ProcessedFile;
+          };
+          return fallback;
         }
       }),
     );
@@ -108,11 +109,8 @@ export class FileProcessor {
    * binary inclusion, and ignore glob patterns.
    */
   private shouldIgnore(file: RepoFile): boolean {
-    const {
-      ignorePatterns,
-      includeHiddenFiles,
-      includeBinaryFiles,
-    } = this.config.processing;
+    const { ignorePatterns, includeHiddenFiles, includeBinaryFiles } =
+      this.config.processing;
     const filePath = file.path;
 
     // Hidden files (dotfiles anywhere in the path).

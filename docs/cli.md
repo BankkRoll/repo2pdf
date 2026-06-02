@@ -5,8 +5,8 @@ repo2pdf provides a powerful command-line interface for converting repositories 
 ## Prerequisites
 
 - **Node.js** >= 18.0.0
-- **Git** - Required for cloning remote repositories
-- **Chromium/Chrome** - repo2pdf uses Puppeteer for PDF generation. Puppeteer automatically downloads Chromium during installation, but in some environments you may need to configure it manually (see [Programmatic API - Prerequisites](./programmatic.md#prerequisites) for Docker/CI setup)
+
+That's it. PDF generation is **pure JavaScript** (via [pdf-lib](https://pdf-lib.js.org/)) — there is no Chromium, Chrome, Puppeteer, or any browser to install or configure. Remote repositories are fetched over HTTP, so a local `git` install is not required either.
 
 ## Installation
 
@@ -30,23 +30,23 @@ repo2pdf convert <repository> [options]
 
 **Options:**
 
-| Option                   | Alias | Description                  | Default             |
-| ------------------------ | ----- | ---------------------------- | ------------------- |
-| `--output <path>`        | `-o`  | Output file path             | `./<repo-name>.pdf` |
+| Option                   | Alias | Description                  | Default                               |
+| ------------------------ | ----- | ---------------------------- | ------------------------------------- |
+| `--output <path>`        | `-o`  | Output file path             | `./<repo-name>.pdf`                   |
 | `--branch <branch>`      | `-b`  | Repository branch            | repo's default branch (auto-detected) |
-| `--token <token>`        | `-t`  | Auth token for private repos | -                   |
-| `--theme <theme>`        |       | Syntax highlighting theme    | `github-light`      |
-| `--no-line-numbers`      |       | Disable line numbers         | -                   |
-| `--no-page-numbers`      |       | Disable page numbers         | -                   |
-| `--no-toc`               |       | Disable table of contents    | -                   |
-| `--ignore <patterns...>` |       | Glob patterns to ignore      | -                   |
-| `--include-binary`       |       | Include binary files         | `false`             |
-| `--include-hidden`       |       | Include hidden files         | `false`             |
-| `--remove-comments`      |       | Remove code comments         | `false`             |
-| `--remove-empty-lines`   |       | Remove empty lines           | `false`             |
-| `--concurrency <n>`      |       | Max concurrent operations    | `5`                 |
-| `--no-cache`             |       | Disable caching              | -                   |
-| `--debug`                |       | Enable debug output          | `false`             |
+| `--token <token>`        | `-t`  | Auth token for private repos | -                                     |
+| `--theme <theme>`        |       | Syntax highlighting theme    | `github-light`                        |
+| `--no-line-numbers`      |       | Disable line numbers         | -                                     |
+| `--no-page-numbers`      |       | Disable page numbers         | -                                     |
+| `--no-toc`               |       | Disable table of contents    | -                                     |
+| `--ignore <patterns...>` |       | Glob patterns to ignore      | -                                     |
+| `--include-binary`       |       | Include binary files         | `false`                               |
+| `--include-hidden`       |       | Include hidden files         | `false`                               |
+| `--remove-comments`      |       | Remove code comments         | `false`                               |
+| `--remove-empty-lines`   |       | Remove empty lines           | `false`                               |
+| `--concurrency <n>`      |       | Max concurrent operations    | `5`                                   |
+| `--no-cache`             |       | Disable caching              | -                                     |
+| `--debug`                |       | Enable debug output          | `false`                               |
 
 **Examples:**
 
@@ -231,9 +231,9 @@ repo2pdf convert user/private-repo
 
 ## Exit Codes
 
-| Code | Description                                                        |
-| ---- | ----------------------------------------------------------------- |
-| `0`  | Success                                                           |
+| Code | Description                                                                                                       |
+| ---- | ----------------------------------------------------------------------------------------------------------------- |
+| `0`  | Success                                                                                                           |
 | `1`  | Error (invalid input, repository not found, auth failure, or generation failure — run with `--debug` for details) |
 
 ## See Also
