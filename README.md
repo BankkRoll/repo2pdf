@@ -247,6 +247,6 @@ repo2pdf is open source software, licensed under the MIT License. See the `LICEN
 ## Star History
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=BankkRoll/repo2pdf&type=Date&theme=dark">
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=BankkRoll/repo2pdf&type=Date">
+  <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=BankkRoll/repo2pdf&type=Date&theme=dark">
+  <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=BankkRoll/repo2pdf&type=Date">
 </picture>
