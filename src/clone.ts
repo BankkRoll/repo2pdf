@@ -3,7 +3,7 @@ import fs from "fs";
 const fsPromises = fs.promises;
 import path from "path";
 
-import git from "simple-git";
+import { simpleGit } from "simple-git";
 import PDFDocument from "pdfkit";
 import hljs from "highlight.js";
 import { isBinaryFileSync } from "isbinaryfile";
@@ -96,7 +96,7 @@ async function main(
   outputFolderName: string,
   keepRepo: boolean,
 ) {
-  const gitP = git();
+  const gitP = simpleGit();
   let tempDir = "./tempRepo";
 
   let doc: typeof PDFDocument | null = null;
